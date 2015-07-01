@@ -16,6 +16,8 @@ find_package(Qt5LinguistToolsMacros)
 
 if (DEFINED ENV{JOB_ID})
   set(BUILD_SEQ $ENV{JOB_ID})
+elseif (DEFINED ENV{ghprbPullId})
+  set(BUILD_SEQ "PR: $ENV{ghprbPullId} - Commit: $ENV{ghprbActualCommit}")
 else ()
   set(BUILD_SEQ "dev")
 endif ()
@@ -140,7 +142,7 @@ target_link_libraries(${TARGET_NAME} ${BULLET_LIBRARIES})
 # link required hifi libraries
 link_hifi_libraries(shared octree environment gpu model render fbx networking entities avatars 
                     audio audio-client animation script-engine physics 
-                    render-utils entities-renderer ui)
+                    render-utils entities-renderer ui auto-updater)
 
 add_dependency_external_projects(sdl2)
 

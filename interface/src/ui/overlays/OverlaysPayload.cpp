@@ -35,9 +35,9 @@
 
 namespace render {
     template <> const ItemKey payloadGetKey(const Overlay::Pointer& overlay) {
-        if (overlay->is3D() && !static_cast<Base3DOverlay*>(overlay.get())->getDrawOnHUD()) {
-            if (static_cast<Base3DOverlay*>(overlay.get())->getDrawInFront()) {
-                return ItemKey::Builder().withTypeShape().withNoDepthSort().build();
+        if (overlay->is3D() && !std::dynamic_pointer_cast<Base3DOverlay>(overlay)->getDrawOnHUD()) {
+            if (std::dynamic_pointer_cast<Base3DOverlay>(overlay)->getDrawInFront()) {
+                return ItemKey::Builder().withTypeShape().withLayered().build();
             } else {
                 return ItemKey::Builder::opaqueShape();
             }
@@ -46,17 +46,23 @@ namespace render {
         }
     }
     template <> const Item::Bound payloadGetBound(const Overlay::Pointer& overlay) {
+        return overlay->getBounds();
+    }
+    template <> int payloadGetLayer(const Overlay::Pointer& overlay) {
+        // MAgic number while we are defining the layering mechanism:
+        const int LAYER_2D =  2;
+        const int LAYER_3D_FRONT = 1;
+        const int LAYER_3D = 0;
         if (overlay->is3D()) {
-            return static_cast<Base3DOverlay*>(overlay.get())->getBounds();
+            return (std::dynamic_pointer_cast<Base3DOverlay>(overlay)->getDrawInFront() ? LAYER_3D_FRONT : LAYER_3D);
         } else {
-            QRect bounds = static_cast<Overlay2D*>(overlay.get())->getBounds();
-            return AABox(glm::vec3(bounds.x(), bounds.y(), 0.0f), glm::vec3(bounds.width(), bounds.height(), 0.1f));
+            return LAYER_2D;
         }
     }
     template <> void payloadRender(const Overlay::Pointer& overlay, RenderArgs* args) {
         if (args) {
-            glPushMatrix();
             if (overlay->getAnchor() == Overlay::MY_AVATAR) {
+                glPushMatrix();
                 MyAvatar* avatar = DependencyManager::get<AvatarManager>()->getMyAvatar();
                 glm::quat myAvatarRotation = avatar->getOrientation();
                 glm::vec3 myAvatarPosition = avatar->getPosition();
@@ -67,9 +73,11 @@ namespace render {
                 glTranslatef(myAvatarPosition.x, myAvatarPosition.y, myAvatarPosition.z);
                 glRotatef(angle, axis.x, axis.y, axis.z);
                 glScalef(myAvatarScale, myAvatarScale, myAvatarScale);
+                overlay->render(args);
+                glPopMatrix();
+            } else {
+                overlay->render(args);
             }
-            overlay->render(args);
-            glPopMatrix();
         }
     }
 }

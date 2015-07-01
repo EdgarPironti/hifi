@@ -11,9 +11,17 @@
 
 #include <QByteArray>
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdouble-promotion"
+#endif
 
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
+
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 #include <gpu/GPUConfig.h>
 
@@ -121,7 +129,7 @@ void RenderablePolyVoxEntityItem::setVoxelVolumeSize(glm::vec3 voxelVolumeSize) 
     _volData->setBorderValue(255);
 
     #ifdef WANT_DEBUG
-    qDebug() << " new size is" << _volData->getWidth() << _volData->getHeight() << _volData->getDepth();
+    qDebug() << " new voxel-space size is" << _volData->getWidth() << _volData->getHeight() << _volData->getDepth();
     #endif
 
     // I'm not sure this is needed... the docs say that each element is initialized with its default
@@ -141,11 +149,7 @@ void RenderablePolyVoxEntityItem::setVoxelVolumeSize(glm::vec3 voxelVolumeSize) 
     decompressVolumeData();
 }
 
-void RenderablePolyVoxEntityItem::setVoxelSurfaceStyle(PolyVoxSurfaceStyle voxelSurfaceStyle) {
-    if (voxelSurfaceStyle == _voxelSurfaceStyle) {
-        return;
-    }
-
+void RenderablePolyVoxEntityItem::updateVoxelSurfaceStyle(PolyVoxSurfaceStyle voxelSurfaceStyle) {
     // if we are switching to or from "edged" we need to force a resize of _volData.
     if (voxelSurfaceStyle == SURFACE_EDGED_CUBIC ||
         _voxelSurfaceStyle == SURFACE_EDGED_CUBIC) {
@@ -153,10 +157,10 @@ void RenderablePolyVoxEntityItem::setVoxelSurfaceStyle(PolyVoxSurfaceStyle voxel
             delete _volData;
         }
         _volData = nullptr;
-        PolyVoxEntityItem::setVoxelSurfaceStyle(voxelSurfaceStyle);
+        _voxelSurfaceStyle = voxelSurfaceStyle;
         setVoxelVolumeSize(_voxelVolumeSize);
     } else {
-        PolyVoxEntityItem::setVoxelSurfaceStyle(voxelSurfaceStyle);
+        _voxelSurfaceStyle = voxelSurfaceStyle;
     }
     _needsModelReload = true;
 }
@@ -213,18 +217,21 @@ uint8_t RenderablePolyVoxEntityItem::getVoxel(int x, int y, int z) {
     // if _voxelSurfaceStyle is SURFACE_EDGED_CUBIC, we maintain an extra layer of
     // voxels all around the requested voxel space.  Having the empty voxels around
     // the edges changes how the surface extractor behaves.
-    
+
     if (_voxelSurfaceStyle == SURFACE_EDGED_CUBIC) {
         return _volData->getVoxelAt(x + 1, y + 1, z + 1);
     }
     return _volData->getVoxelAt(x, y, z);
 }
 
-void RenderablePolyVoxEntityItem::setVoxel(int x, int y, int z, uint8_t toValue) {
+void RenderablePolyVoxEntityItem::setVoxelInternal(int x, int y, int z, uint8_t toValue) {
+    // set a voxel without recompressing the voxel data
     assert(_volData);
     if (!inUserBounds(_volData, _voxelSurfaceStyle, x, y, z)) {
         return;
     }
+
+    updateOnCount(x, y, z, toValue);
 
     if (_voxelSurfaceStyle == SURFACE_EDGED_CUBIC) {
         _volData->setVoxelAt(x + 1, y + 1, z + 1, toValue);
@@ -234,12 +241,20 @@ void RenderablePolyVoxEntityItem::setVoxel(int x, int y, int z, uint8_t toValue)
 }
 
 
+void RenderablePolyVoxEntityItem::setVoxel(int x, int y, int z, uint8_t toValue) {
+    if (_locked) {
+        return;
+    }
+    setVoxelInternal(x, y, z, toValue);
+    compressVolumeData();
+}
+
 void RenderablePolyVoxEntityItem::updateOnCount(int x, int y, int z, uint8_t toValue) {
     // keep _onCount up to date
     if (!inUserBounds(_volData, _voxelSurfaceStyle, x, y, z)) {
         return;
     }
-    
+
     uint8_t uVoxelValue = getVoxel(x, y, z);
     if (toValue != 0) {
         if (uVoxelValue == 0) {
@@ -255,11 +270,15 @@ void RenderablePolyVoxEntityItem::updateOnCount(int x, int y, int z, uint8_t toV
 }
 
 void RenderablePolyVoxEntityItem::setAll(uint8_t toValue) {
+    if (_locked) {
+        return;
+    }
+
     for (int z = 0; z < _voxelVolumeSize.z; z++) {
         for (int y = 0; y < _voxelVolumeSize.y; y++) {
             for (int x = 0; x < _voxelVolumeSize.x; x++) {
                 updateOnCount(x, y, z, toValue);
-                setVoxel(x, y, z, toValue);
+                setVoxelInternal(x, y, z, toValue);
             }
         }
     }
@@ -267,11 +286,19 @@ void RenderablePolyVoxEntityItem::setAll(uint8_t toValue) {
 }
 
 void RenderablePolyVoxEntityItem::setVoxelInVolume(glm::vec3 position, uint8_t toValue) {
-    updateOnCount(position.x, position.y, position.z, toValue);
-    setVoxel(position.x, position.y, position.z, toValue);
+    if (_locked) {
+        return;
+    }
+
+    // same as setVoxel but takes a vector rather than 3 floats.
+    setVoxel((int)position.x, (int)position.y, (int)position.z, toValue);
 }
 
 void RenderablePolyVoxEntityItem::setSphereInVolume(glm::vec3 center, float radius, uint8_t toValue) {
+    if (_locked) {
+        return;
+    }
+
     // This three-level for loop iterates over every voxel in the volume
     for (int z = 0; z < _voxelVolumeSize.z; z++) {
         for (int y = 0; y < _voxelVolumeSize.y; y++) {
@@ -283,7 +310,7 @@ void RenderablePolyVoxEntityItem::setSphereInVolume(glm::vec3 center, float radi
                 // If the current voxel is less than 'radius' units from the center then we make it solid.
                 if (fDistToCenter <= radius) {
                     updateOnCount(x, y, z, toValue);
-                    setVoxel(x, y, z, toValue);
+                    setVoxelInternal(x, y, z, toValue);
                 }
             }
         }
@@ -347,8 +374,8 @@ void RenderablePolyVoxEntityItem::getModel() {
                                        sizeof(PolyVox::PositionMaterialNormal),
                                        gpu::Element(gpu::VEC3, gpu::FLOAT, gpu::RAW)));
 
-    
-    
+
+
     // auto normalAttrib = mesh->getAttributeBuffer(gpu::Stream::NORMAL);
     // for (auto normal = normalAttrib.begin<glm::vec3>(); normal != normalAttrib.end<glm::vec3>(); normal++) {
     //     (*normal) = -(*normal);
@@ -363,7 +390,7 @@ void RenderablePolyVoxEntityItem::getModel() {
     //                                    gpu::Element(gpu::VEC2, gpu::FLOAT, gpu::RAW)));
 
 
-    
+
     #ifdef WANT_DEBUG
     qDebug() << "---- vecIndices.size() =" << vecIndices.size();
     qDebug() << "---- vecVertices.size() =" << vecVertices.size();
@@ -379,11 +406,8 @@ void RenderablePolyVoxEntityItem::render(RenderArgs* args) {
     if (_needsModelReload) {
         getModel();
     }
-    
-    Transform transform;
-    transform.setTranslation(getPosition() - getRegistrationPoint() * getDimensions());
-    transform.setRotation(getRotation());
-    transform.setScale(getDimensions() / _voxelVolumeSize);
+
+    Transform transform(voxelToWorldMatrix());
 
     auto mesh = _modelGeometry.getMesh();
     Q_ASSERT(args->_batch);
@@ -398,7 +422,7 @@ void RenderablePolyVoxEntityItem::render(RenderArgs* args) {
                          mesh->getVertexBuffer()._stride);
     batch.setIndexBuffer(gpu::UINT32, mesh->getIndexBuffer()._buffer, 0);
     batch.drawIndexed(gpu::TRIANGLES, mesh->getNumIndices(), 0);
-    
+
     RenderableDebugableEntityItem::render(this, args);
 }
 
@@ -434,7 +458,7 @@ bool RenderablePolyVoxEntityItem::findDetailedRayIntersection(const glm::vec3& o
                                                               const glm::vec3& direction,
                                                               bool& keepSearching,
                                                               OctreeElement*& element,
-                                                              float& distance, BoxFace& face, 
+                                                              float& distance, BoxFace& face,
                                                               void** intersectedObject,
                                                               bool precisionPicking) const
 {
@@ -448,14 +472,13 @@ bool RenderablePolyVoxEntityItem::findDetailedRayIntersection(const glm::vec3& o
     glm::vec3 normDirection = glm::normalize(direction);
 
     // the PolyVox ray intersection code requires a near and far point.
-    glm::vec3 scale = getDimensions() / _voxelVolumeSize; // meters / voxel-units
-    // set ray cast length to long enough to cover all of the voxel space    
+    // set ray cast length to long enough to cover all of the voxel space
     float distanceToEntity = glm::distance(origin, getPosition());
     float largestDimension = glm::max(getDimensions().x, getDimensions().y, getDimensions().z) * 2.0f;
     glm::vec3 farPoint = origin + normDirection * (distanceToEntity + largestDimension);
     glm::vec4 originInVoxel = wtvMatrix * glm::vec4(origin, 1.0f);
     glm::vec4 farInVoxel = wtvMatrix * glm::vec4(farPoint, 1.0f);
-    
+
     PolyVox::Vector3DFloat startPoint(originInVoxel.x, originInVoxel.y, originInVoxel.z);
     PolyVox::Vector3DFloat endPoint(farInVoxel.x, farInVoxel.y, farInVoxel.z);
 
@@ -479,7 +502,7 @@ bool RenderablePolyVoxEntityItem::findDetailedRayIntersection(const glm::vec3& o
     }
 
     result -= glm::vec4(0.5f, 0.5f, 0.5f, 0.0f);
-    
+
     glm::vec4 intersectedWorldPosition = voxelToWorldMatrix() * result;
 
     distance = glm::distance(glm::vec3(intersectedWorldPosition), origin);
@@ -515,6 +538,11 @@ void RenderablePolyVoxEntityItem::compressVolumeData() {
 
     QByteArray newVoxelData;
     QDataStream writer(&newVoxelData, QIODevice::WriteOnly | QIODevice::Truncate);
+
+    #ifdef WANT_DEBUG
+    qDebug() << "compressing voxel data of size:" << voxelXSize << voxelYSize << voxelZSize;
+    #endif
+
     writer << voxelXSize << voxelYSize << voxelZSize;
 
     QByteArray compressedData = qCompress(uncompressedData, 9);
@@ -556,9 +584,9 @@ void RenderablePolyVoxEntityItem::decompressVolumeData() {
                  << voxelXSize << voxelYSize << voxelZSize;
         return;
     }
-    
+
     int rawSize = voxelXSize * voxelYSize * voxelZSize;
-    
+
     QByteArray compressedData;
     reader >> compressedData;
     QByteArray uncompressedData = qUncompress(compressedData);
@@ -574,7 +602,7 @@ void RenderablePolyVoxEntityItem::decompressVolumeData() {
             for (int x = 0; x < voxelXSize; x++) {
                 int uncompressedIndex = (z * voxelYSize * voxelXSize) + (y * voxelZSize) + x;
                 updateOnCount(x, y, z, uncompressedData[uncompressedIndex]);
-                setVoxel(x, y, z, uncompressedData[uncompressedIndex]);
+                setVoxelInternal(x, y, z, uncompressedData[uncompressedIndex]);
             }
         }
     }
@@ -635,9 +663,6 @@ void RenderablePolyVoxEntityItem::computeShapeInfo(ShapeInfo& info) {
                     float offL = -0.5f;
                     float offH = 0.5f;
 
-                    // float offL = 0.0f;
-                    // float offH = 1.0f;
-                    
                     glm::vec3 p000 = glm::vec3(wToM * glm::vec4(x + offL, y + offL, z + offL, 1.0f));
                     glm::vec3 p001 = glm::vec3(wToM * glm::vec4(x + offL, y + offL, z + offH, 1.0f));
                     glm::vec3 p010 = glm::vec3(wToM * glm::vec4(x + offL, y + offH, z + offL, 1.0f));

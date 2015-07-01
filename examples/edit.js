@@ -2,6 +2,7 @@
 //  examples
 //
 //  Created by Brad Hefta-Gaub on 10/2/14.
+//  Persist toolbar by HRS 6/11/15.
 //  Copyright 2014 High Fidelity, Inc.
 //
 //  This script allows you to edit entities with a new UI/UX for mouse and trackpad based editing
@@ -48,7 +49,6 @@ selectionManager.addEventListener(function() {
     lightOverlayManager.updatePositions();
 });
 
-var windowDimensions = Controller.getViewportDimensions();
 var toolIconUrl = HIFI_PUBLIC_BUCKET + "images/tools/";
 var toolHeight = 50;
 var toolWidth = 50;
@@ -142,7 +142,12 @@ var toolBar = (function () {
         browseMarketplaceButton;
 
     function initialize() {
-        toolBar = new ToolBar(0, 0, ToolBar.VERTICAL);
+        toolBar = new ToolBar(0, 0, ToolBar.VERTICAL, "highfidelity.edit.toolbar", function (windowDimensions, toolbar) {
+            return {
+                x: windowDimensions.x - 8 - toolbar.width,
+                y: (windowDimensions.y - toolbar.height) / 2
+            };
+        });
 
         browseMarketplaceButton = toolBar.addTool({
             imageURL: toolIconUrl + "marketplace.svg",
@@ -319,28 +324,6 @@ var toolBar = (function () {
             print("Can't add model: Model would be out of bounds.");
         }
     }
-
-    that.move = function () {
-        var newViewPort,
-            toolsX,
-            toolsY;
-
-        newViewPort = Controller.getViewportDimensions();
-
-        if (toolBar === undefined) {
-            initialize();
-
-        } else if (windowDimensions.x === newViewPort.x &&
-                   windowDimensions.y === newViewPort.y) {
-            return;
-        }
-
-        windowDimensions = newViewPort;
-        toolsX = windowDimensions.x - 8 - toolBar.width;
-        toolsY = (windowDimensions.y - toolBar.height) / 2;
-
-        toolBar.move(toolsX, toolsY);
-    };
 
     var newModelButtonDown = false;
     var browseMarketplaceButtonDown = false;
@@ -541,6 +524,7 @@ var toolBar = (function () {
         toolBar.cleanup();
     };
 
+    initialize();
     return that;
 }());
 
@@ -920,7 +904,6 @@ var lastPosition = null;
 
 // Do some stuff regularly, like check for placement of various overlays
 Script.update.connect(function (deltaTime) {
-    toolBar.move();
     progressDialog.move();
     selectionDisplay.checkMove();
     var dOrientation = Math.abs(Quat.dot(Camera.orientation, lastOrientation) - 1);
@@ -1337,6 +1320,15 @@ PropertiesTool = function(opts) {
                     }
                     pushCommandForSelections();
                     selectionManager._update();
+                }
+            } else if (data.action == "reloadScript") {
+                if (selectionManager.hasSelection()) {
+                    var timestamp = Date.now();
+                    for (var i = 0; i < selectionManager.selections.length; i++) {
+                        Entities.editEntity(selectionManager.selections[i], {
+                            scriptTimestamp: timestamp,
+                        });
+                    }
                 }
             } else if (data.action == "centerAtmosphereToZone") {
                 if (selectionManager.hasSelection()) {

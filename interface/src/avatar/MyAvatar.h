@@ -35,11 +35,12 @@ public:
     void reset();
     void update(float deltaTime);
     void simulate(float deltaTime);
+    void preRender(RenderArgs* renderArgs);
     void updateFromTrackers(float deltaTime);
 
     virtual void render(RenderArgs* renderArgs, const glm::vec3& cameraPosition, bool postLighting = false) override;
     virtual void renderBody(RenderArgs* renderArgs, ViewFrustum* renderFrustum, bool postLighting, float glowLevel = 0.0f) override;
-    virtual bool shouldRenderHead(const RenderArgs* renderArgs, const glm::vec3& cameraPosition) const override;
+    virtual bool shouldRenderHead(const RenderArgs* renderArgs) const override;
     void renderDebugBodyPoints();
 
     // setters
@@ -90,7 +91,7 @@ public:
     
     void relayDriveKeysToCharacterController();
 
-    bool isMyAvatar() { return true; }
+    bool isMyAvatar() const { return true; }
     
     bool isLookingAtLeftEye();
 
@@ -162,6 +163,13 @@ public:
     const RecorderPointer getRecorder() const { return _recorder; }
     const PlayerPointer getPlayer() const { return _player; }
     
+    float getBoomLength() const { return _boomLength; }
+    void setBoomLength(float boomLength) { _boomLength = boomLength; }
+    
+    static const float ZOOM_MIN;
+    static const float ZOOM_MAX;
+    static const float ZOOM_DEFAULT;
+    
 public slots:
     void increaseSize();
     void decreaseSize();
@@ -197,22 +205,24 @@ public slots:
 signals:
     void transformChanged();
 
-protected:
-    virtual void renderAttachments(RenderArgs* args);
-    
 private:
+
+    bool cameraInsideHead() const;
 
     // These are made private for MyAvatar so that you will use the "use" methods instead
     virtual void setFaceModelURL(const QUrl& faceModelURL);
     virtual void setSkeletonModelURL(const QUrl& skeletonModelURL);
 
-    float _turningKeyPressTime;
+    void setVisibleInSceneIfReady(Model* model, render::ScenePointer scene, bool visiblity);
+
     glm::vec3 _gravity;
 
     float _driveKeys[MAX_DRIVE_KEYS];
     bool _wasPushing;
     bool _isPushing;
     bool _isBraking;
+    
+    float _boomLength;
 
     float _trapDuration; // seconds that avatar has been trapped by collisions
     glm::vec3 _thrust;  // impulse accumulator for outside sources
@@ -260,6 +270,10 @@ private:
     QString _headModelName;
     QString _bodyModelName;
     QString _fullAvatarModelName;
+
+    // used for rendering when in first person view or when in an HMD.
+    SkeletonModel _firstPersonSkeletonModel;
+    bool _prevShouldDrawHead;
 };
 
 #endif // hifi_MyAvatar_h

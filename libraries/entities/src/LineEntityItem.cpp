@@ -18,10 +18,12 @@
 #include "EntityTree.h"
 #include "EntitiesLogging.h"
 #include "EntityTreeElement.h"
+#include "OctreeConstants.h"
 
 
 
 const float LineEntityItem::DEFAULT_LINE_WIDTH = 2.0f;
+const int LineEntityItem::MAX_POINTS_PER_LINE = 70;
 
 
 EntityItemPointer LineEntityItem::factory(const EntityItemID& entityID, const EntityItemProperties& properties) {
@@ -84,20 +86,38 @@ bool LineEntityItem::setProperties(const EntityItemProperties& properties) {
     return somethingChanged;
 }
 
-void LineEntityItem::setLinePoints(const QVector<glm::vec3>& points) {
-    QVector<glm::vec3> sanitizedPoints;
+bool LineEntityItem::appendPoint(const glm::vec3& point) {
+    if (_points.size() > MAX_POINTS_PER_LINE - 1) {
+        qDebug() << "MAX POINTS REACHED!";
+        return false;
+    }
+    glm::vec3 halfBox = getDimensions() * 0.5f;
+    if ( (point.x < - halfBox.x || point.x > halfBox.x) || (point.y < -halfBox.y || point.y > halfBox.y) || (point.z < - halfBox.z || point.z > halfBox.z) ) {
+        qDebug() << "Point is outside entity's bounding box";
+        return false;
+    }
+    _points << point;
+    _pointsChanged = true;
+    return true;
+}
+
+bool LineEntityItem::setLinePoints(const QVector<glm::vec3>& points) {
+    if (points.size() > MAX_POINTS_PER_LINE) {
+        return false;
+    }
     for (int i = 0; i < points.size(); i++) {
         glm::vec3 point = points.at(i);
-        // Make sure all of our points are valid numbers.
-        // Must be greater than 0 because vector component is set to 0 if it is invalid data
-        if (point.x > 0 && point.y > 0 && point.z > 0){
-            sanitizedPoints << point;
-        } else {
-            qDebug() << "INVALID POINT";
+        glm::vec3 pos = getPosition();
+        glm::vec3 halfBox = getDimensions() * 0.5f;
+        if ( (point.x < - halfBox.x || point.x > halfBox.x) || (point.y < -halfBox.y || point.y > halfBox.y) || (point.z < - halfBox.z || point.z > halfBox.z) ) {
+            qDebug() << "Point is outside entity's bounding box";
+            return false;
         }
+        
     }
-    _points = sanitizedPoints;
+    _points = points;
     _pointsChanged = true;
+    return true;
 }
 
 int LineEntityItem::readEntitySubclassDataFromBuffer(const unsigned char* data, int bytesLeftToRead,

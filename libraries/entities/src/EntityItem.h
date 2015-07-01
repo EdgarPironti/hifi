@@ -28,12 +28,15 @@
 #include "EntityItemID.h"
 #include "EntityItemProperties.h"
 #include "EntityItemPropertiesDefaults.h"
-#include "EntityActionInterface.h"
 #include "EntityTypes.h"
 
 class EntitySimulation;
 class EntityTreeElement;
 class EntityTreeElementExtraEncodeData;
+
+class EntityActionInterface;
+typedef std::shared_ptr<EntityActionInterface> EntityActionPointer;
+
 
 namespace render {
     class Scene;
@@ -203,7 +206,14 @@ public:
     
     inline const glm::quat& getRotation() const { return _transform.getRotation(); }
     inline void setRotation(const glm::quat& rotation) { _transform.setRotation(rotation); }
-    
+
+    // Hyperlink related getters and setters
+    QString getHref() const { return _href; }
+    void setHref(QString value) { _href = value; }
+
+    QString getDescription() const { return _description; }
+    void setDescription(QString value) { _description = value; }
+
     /// Dimensions in meters (0.0 - TREE_SCALE)
     inline const glm::vec3& getDimensions() const { return _transform.getScale(); }
     virtual void setDimensions(const glm::vec3& value);
@@ -266,6 +276,10 @@ public:
 
     const QString& getScript() const { return _script; }
     void setScript(const QString& value) { _script = value; }
+
+    quint64 getScriptTimestamp() const { return _scriptTimestamp; }
+    void setScriptTimestamp(const quint64 value) { _scriptTimestamp = value; }
+
     const QString& getCollisionSoundURL() const { return _collisionSoundURL; }
     void setCollisionSoundURL(const QString& value) { _collisionSoundURL = value; }
 
@@ -303,7 +317,7 @@ public:
 
     const QString& getUserData() const { return _userData; }
     void setUserData(const QString& value) { _userData = value; }
-
+    
     QUuid getSimulatorID() const { return _simulatorID; }
     void setSimulatorID(const QUuid& value);
     void updateSimulatorID(const QUuid& value);
@@ -402,6 +416,7 @@ protected:
     float _friction;
     float _lifetime;
     QString _script;
+    quint64 _scriptTimestamp;
     QString _collisionSoundURL;
     glm::vec3 _registrationPoint;
     glm::vec3 _angularVelocity;
@@ -415,6 +430,8 @@ protected:
     quint64 _simulatorIDChangedTime; // when was _simulatorID last updated?
     QString _marketplaceID;
     QString _name;
+    QString _href; //Hyperlink href
+    QString _description; //Hyperlink description
 
     // NOTE: Damping is applied like this:  v *= pow(1 - damping, dt)
     //

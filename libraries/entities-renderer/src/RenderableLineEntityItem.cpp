@@ -43,12 +43,14 @@ void RenderableLineEntityItem::render(RenderArgs* args) {
     
     Q_ASSERT(args->_batch);
     gpu::Batch& batch = *args->_batch;
-    // TODO: Figure out clean , efficient way to do relative line positioning. For now we'll just use absolute positioning.
-    //batch.setModelTransform(getTransformToCenter());
-    batch.setModelTransform(Transform());
+    Transform transform = Transform();
+    transform.setTranslation(getPosition());
+    transform.setRotation(getRotation());
+    batch.setModelTransform(transform);
     
     batch._glLineWidth(getLineWidth());
     if (getLinePoints().size() > 1) {
+        DependencyManager::get<DeferredLightingEffect>()->bindSimpleProgram(batch);
         DependencyManager::get<GeometryCache>()->renderVertices(batch, gpu::LINE_STRIP, _lineVerticesID);
     }
     batch._glLineWidth(1.0f);

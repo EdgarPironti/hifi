@@ -99,6 +99,13 @@ var NUM_BUTTONS = 3;
 
 var screenSize = Controller.getViewportDimensions();
 var startX = screenSize.x / 2 - (NUM_BUTTONS * (BUTTON_SIZE + PADDING)) / 2;
+Script.include(["../../libraries/toolBars.js"]);
+var toolBar = new ToolBar(0, 0, ToolBar.HORIZONTAL, "highfidelity.gun.toolbar", function (screenSize) {
+    return {
+        x: startX,
+        y: (screenSize.y - (BUTTON_SIZE + PADDING)),
+    };
+});
 var reticle = Overlays.addOverlay("image", {
                     x: screenSize.x / 2 - (BUTTON_SIZE / 2),
                     y: screenSize.y / 2 - (BUTTON_SIZE / 2),
@@ -108,9 +115,7 @@ var reticle = Overlays.addOverlay("image", {
                     alpha: 1
                 });
 
-var offButton = Overlays.addOverlay("image", {
-                    x: startX,
-                    y: screenSize.y - (BUTTON_SIZE + PADDING),
+var offButton = toolBar.addOverlay("image", {
                     width: BUTTON_SIZE,
                     height: BUTTON_SIZE,
                     imageURL: HIFI_PUBLIC_BUCKET + "images/gun/close.svg",
@@ -118,7 +123,7 @@ var offButton = Overlays.addOverlay("image", {
                 });
 
 startX += BUTTON_SIZE + PADDING;
-var platformButton = Overlays.addOverlay("image", {
+var platformButton = toolBar.addOverlay("image", {
                     x: startX,
                     y: screenSize.y - (BUTTON_SIZE + PADDING),
                     width: BUTTON_SIZE,
@@ -128,7 +133,7 @@ var platformButton = Overlays.addOverlay("image", {
                 });
 
 startX += BUTTON_SIZE + PADDING;
-var gridButton = Overlays.addOverlay("image", {
+var gridButton = toolBar.addOverlay("image", {
                     x: startX,
                     y: screenSize.y - (BUTTON_SIZE + PADDING),
                     width: BUTTON_SIZE,
@@ -174,7 +179,7 @@ function entityCollisionWithEntity(entity1, entity2, collision) {
 }
 
 function shootBullet(position, velocity, grenade) {
-    var BULLET_SIZE = 0.10;
+    var BULLET_SIZE = .09;
     var BULLET_LIFETIME = 10.0;
     var BULLET_GRAVITY = -0.25;
     var GRENADE_VELOCITY = 15.0;
@@ -493,10 +498,8 @@ function mousePressEvent(event) {
 }
 
 function scriptEnding() {
-    Overlays.deleteOverlay(reticle); 
-    Overlays.deleteOverlay(offButton);
-    Overlays.deleteOverlay(platformButton);
-    Overlays.deleteOverlay(gridButton);
+    Overlays.deleteOverlay(reticle);
+    toolBar.cleanup();
     Overlays.deleteOverlay(pointer[0]);
     Overlays.deleteOverlay(pointer[1]);
     Overlays.deleteOverlay(text);

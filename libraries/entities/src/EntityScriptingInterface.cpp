@@ -17,6 +17,8 @@
 #include "ZoneEntityItem.h"
 #include "EntitiesLogging.h"
 #include "EntitySimulation.h"
+#include "EntityActionInterface.h"
+#include "EntityActionFactoryInterface.h"
 
 #include "EntityScriptingInterface.h"
 
@@ -440,6 +442,43 @@ bool EntityScriptingInterface::setVoxels(QUuid entityID,
     return true;
 }
 
+bool EntityScriptingInterface::setPoints(QUuid entityID, std::function<bool(LineEntityItem&)> actor) {
+    if (!_entityTree) {
+        return false;
+    }
+    
+    EntityItemPointer entity = static_cast<EntityItemPointer>(_entityTree->findEntityByEntityItemID(entityID));
+    if (!entity) {
+        qCDebug(entities) << "EntityScriptingInterface::setPoints no entity with ID" << entityID;
+    }
+    
+    EntityTypes::EntityType entityType = entity->getType();
+    
+    if (entityType != EntityTypes::Line) {
+        return false;
+    }
+    
+    auto now = usecTimestampNow();
+    
+    LineEntityItem* lineEntity = static_cast<LineEntityItem*>(entity.get());
+    _entityTree->lockForWrite();
+    bool success = actor(*lineEntity);
+    entity->setLastEdited(now);
+    entity->setLastBroadcast(now);
+    _entityTree->unlock();
+    
+    _entityTree->lockForRead();
+    EntityItemProperties properties = entity->getProperties();
+    _entityTree->unlock();
+    
+    properties.setLinePointsDirty();
+    properties.setLastEdited(now);
+    
+    
+    queueEntityMessage(PacketTypeEntityEdit, entityID, properties);
+    return success;
+}
+
 bool EntityScriptingInterface::setVoxelSphere(QUuid entityID, const glm::vec3& center, float radius, int value) {
     return setVoxels(entityID, [center, radius, value](PolyVoxEntityItem& polyVoxEntity) {
             polyVoxEntity.setSphere(center, radius, value);
@@ -456,6 +495,21 @@ bool EntityScriptingInterface::setAllVoxels(QUuid entityID, int value) {
     return setVoxels(entityID, [value](PolyVoxEntityItem& polyVoxEntity) {
             polyVoxEntity.setAll(value);
         });
+}
+
+bool EntityScriptingInterface::setAllPoints(QUuid entityID, const QVector<glm::vec3>& points) {
+    return setPoints(entityID, [points](LineEntityItem& lineEntity) -> bool
+    {
+        return lineEntity.setLinePoints(points);
+    });
+}
+
+bool EntityScriptingInterface::appendPoint(QUuid entityID, const glm::vec3& point) {
+    return setPoints(entityID, [point](LineEntityItem& lineEntity) -> bool
+    {
+        return lineEntity.appendPoint(point);
+    });
+    
 }
 
 
@@ -491,12 +545,19 @@ QUuid EntityScriptingInterface::addAction(const QString& actionTypeString,
                                           const QUuid& entityID,
                                           const QVariantMap& arguments) {
     QUuid actionID = QUuid::createUuid();
+    auto actionFactory = DependencyManager::get<EntityActionFactoryInterface>();
     bool success = actionWorker(entityID, [&](EntitySimulation* simulation, EntityItemPointer entity) {
+            // create this action even if the entity doesn't have physics info.  it will often be the
+            // case that a script adds an action immediately after an object is created, and the physicsInfo
+            // is computed asynchronously.
+            // if (!entity->getPhysicsInfo()) {
+            //     return false;
+            // }
             EntityActionType actionType = EntityActionInterface::actionTypeFromString(actionTypeString);
             if (actionType == ACTION_TYPE_NONE) {
                 return false;
             }
-            if (simulation->actionFactory(actionType, actionID, entity, arguments)) {
+            if (actionFactory->factory(simulation, actionType, actionID, entity, arguments)) {
                 return true;
             }
             return false;

@@ -3,6 +3,7 @@
 //
 //  Created by Seth Alves on May 15th
 //  Modified by Eric Levin on June 4
+//  Persist toolbar by HRS 6/11/15.
 //  Copyright 2015 High Fidelity, Inc.
 //
 //  Provides a pointer with option to draw on surfaces
@@ -28,12 +29,13 @@ var buttonOnColor = {
 };
 
 HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-var screenSize = Controller.getViewportDimensions();
 
 var userCanPoint = false;
-var pointerButton = Overlays.addOverlay("image", {
-  x: screenSize.x / 2 - BUTTON_SIZE * 2 + PADDING,
-  y: screenSize.y - (BUTTON_SIZE + PADDING),
+Script.include(["libraries/toolBars.js"]);
+var toolBar = new ToolBar(0, 0, ToolBar.HORIZONTAL, "highfidelity.pointer.toolbar", function (screenSize) {
+    return {x: screenSize.x / 2 - BUTTON_SIZE * 2 + PADDING, y: screenSize.y - (BUTTON_SIZE + PADDING)},
+});
+var pointerButton = toolBar.addOverlay("image", {
   width: BUTTON_SIZE,
   height: BUTTON_SIZE,
   imageURL: HIFI_PUBLIC_BUCKET + "images/laser.png",

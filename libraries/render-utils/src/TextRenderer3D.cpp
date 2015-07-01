@@ -30,11 +30,6 @@
 #include "GeometryCache.h"
 #include "DeferredLightingEffect.h"
 
-// FIXME support the shadow effect, or remove it from the API
-// FIXME figure out how to improve the anti-aliasing on the
-// interior of the outline fonts
-const float DEFAULT_POINT_SIZE = 12;
-
 // Helper functions for reading binary data from an IO device
 template<class T>
 void readStream(QIODevice& in, T& t) {
@@ -101,7 +96,7 @@ struct QuadBuilder {
                                     texMin);
     }
     QuadBuilder(const Glyph3D& glyph, const glm::vec2& offset) :
-    QuadBuilder(offset + glyph.offset - glm::vec2(0.0f, glyph.size.y), glyph.size,
+    QuadBuilder(offset + glm::vec2(glyph.offset.x, glyph.offset.y - glyph.size.y), glyph.size,
                     glyph.texOffset, glyph.texSize) {}
     
 };
@@ -113,11 +108,11 @@ public:
     void read(QIODevice& path);
 
     glm::vec2 computeExtent(const QString& str) const;
-    float getRowHeight() const { return _rowHeight; }
+    float getFontSize() const { return _fontSize; }
     
     // Render string to batch
     void drawString(gpu::Batch& batch, float x, float y, const QString& str,
-            const glm::vec4& color, TextRenderer3D::EffectType effectType,
+            const glm::vec4* color, TextRenderer3D::EffectType effectType,
             const glm::vec2& bound);
 
 private:
@@ -139,7 +134,6 @@ private:
     // Font characteristics
     QString _family;
     float _fontSize = 0.0f;
-    float _rowHeight = 0.0f;
     float _leading = 0.0f;
     float _ascent = 0.0f;
     float _descent = 0.0f;
@@ -251,13 +245,14 @@ glm::vec2 Font3D::computeTokenExtent(const QString& token) const {
 glm::vec2 Font3D::computeExtent(const QString& str) const {
     glm::vec2 extent = glm::vec2(0.0f, 0.0f);
     
-    QStringList tokens = splitLines(str);
-    foreach(const QString& token, tokens) {
-        glm::vec2 tokenExtent = computeTokenExtent(token);
-        extent.x = std::max(tokenExtent.x, extent.x);
+    QStringList lines{ splitLines(str) };
+    if (!lines.empty()) {
+        for(const auto& line : lines) {
+            glm::vec2 tokenExtent = computeTokenExtent(line);
+            extent.x = std::max(tokenExtent.x, extent.x);
+        }
+        extent.y = lines.count() * _fontSize;
     }
-    extent.y = tokens.count() * _rowHeight;
-    
     return extent;
 }
 
@@ -288,8 +283,7 @@ void Font3D::read(QIODevice& in) {
     readStream(in, _descent);
     readStream(in, _spaceWidth);
     _fontSize = _ascent + _descent;
-    _rowHeight = _fontSize + _leading;
-
+    
     // Read character count
     uint16_t count;
     readStream(in, count);
@@ -368,7 +362,7 @@ void Font3D::setupGPU() {
     }
 }
 
-void Font3D::drawString(gpu::Batch& batch, float x, float y, const QString& str, const glm::vec4& color,
+void Font3D::drawString(gpu::Batch& batch, float x, float y, const QString& str, const glm::vec4* color,
                       TextRenderer3D::EffectType effectType, const glm::vec2& bounds) {
     if (str == "") {
         return;
@@ -393,7 +387,7 @@ void Font3D::drawString(gpu::Batch& batch, float x, float y, const QString& str,
             }
             if (isNewLine || forceNewLine) {
                 // Character return, move the advance to a new line
-                advance = glm::vec2(x, advance.y - _rowHeight);
+                advance = glm::vec2(x, advance.y - _leading);
 
                 if (isNewLine) {
                     // No need to draw anything, go directly to next token
@@ -413,7 +407,7 @@ void Font3D::drawString(gpu::Batch& batch, float x, float y, const QString& str,
                 for (auto c : token) {
                     auto glyph = _glyphs[c];
                     
-                    QuadBuilder qd(glyph, advance - glm::vec2(0.0f, _fontSize));
+                    QuadBuilder qd(glyph, advance - glm::vec2(0.0f, _ascent));
                     _verticesBuffer->append(sizeof(QuadBuilder), (const gpu::Byte*)&qd);
                     _numVertices += 4;
                     
@@ -430,40 +424,33 @@ void Font3D::drawString(gpu::Batch& batch, float x, float y, const QString& str,
     setupGPU();
     batch.setPipeline(_pipeline);
     batch.setUniformTexture(_fontLoc, _texture);
-    batch._glUniform1f(_outlineLoc, (effectType == TextRenderer3D::OUTLINE_EFFECT) ? 1.0f : 0.0f);
-    batch._glUniform4fv(_colorLoc, 1, (const GLfloat*)&color);
+    batch._glUniform1i(_outlineLoc, (effectType == TextRenderer3D::OUTLINE_EFFECT));
+    batch._glUniform4fv(_colorLoc, 1, (const GLfloat*)color);
     
     batch.setInputFormat(_format);
     batch.setInputBuffer(0, _verticesBuffer, 0, _format->getChannels().at(0)._stride);
     batch.draw(gpu::QUADS, _numVertices, 0);
 }
 
-TextRenderer3D* TextRenderer3D::getInstance(const char* family, float pointSize,
-        int weight, bool italic, EffectType effect, int effectThickness,
-        const QColor& color) {
-    if (pointSize < 0) {
-        pointSize = DEFAULT_POINT_SIZE;
-    }
-    return new TextRenderer3D(family, pointSize, weight, italic, effect,
-            effectThickness, color);
+TextRenderer3D* TextRenderer3D::getInstance(const char* family,
+        int weight, bool italic, EffectType effect, int effectThickness) {
+    return new TextRenderer3D(family, weight, italic, effect, effectThickness);
 }
 
-TextRenderer3D::TextRenderer3D(const char* family, float pointSize, int weight, bool italic,
-                           EffectType effect, int effectThickness, const QColor& color) :
+TextRenderer3D::TextRenderer3D(const char* family, int weight, bool italic,
+                           EffectType effect, int effectThickness) :
     _effectType(effect),
     _effectThickness(effectThickness),
-    _pointSize(pointSize),
-    _color(toGlm(color)),
     _font(loadFont3D(family)) {
     if (!_font) {
         qWarning() << "Unable to load font with family " << family;
         _font = loadFont3D("Courier");
     }
     if (1 != _effectThickness) {
-        qWarning() << "Effect thickness not current supported";
+        qWarning() << "Effect thickness not currently supported";
     }
     if (NO_EFFECT != _effectType && OUTLINE_EFFECT != _effectType) {
-        qWarning() << "Effect thickness not current supported";
+        qWarning() << "Effect type not currently supported";
     }
 }
 
@@ -477,9 +464,9 @@ glm::vec2 TextRenderer3D::computeExtent(const QString& str) const {
     return glm::vec2(0.0f, 0.0f);
 }
 
-float TextRenderer3D::getRowHeight() const {
+float TextRenderer3D::getFontSize() const {
     if (_font) {
-        return _font->getRowHeight();
+        return _font->getFontSize();
     }
     return 0.0f;
 }
@@ -488,11 +475,9 @@ void TextRenderer3D::draw(gpu::Batch& batch, float x, float y, const QString& st
                          const glm::vec2& bounds) {
     // The font does all the OpenGL work
     if (_font) {
-        glm::vec4 actualColor(color);
-        if (actualColor.r < 0) {
-            actualColor = _color;
-        }
-        _font->drawString(batch, x, y, str, actualColor, _effectType, bounds);
+        // Cache color so that the pointer stays valid.
+        _color = color;
+        _font->drawString(batch, x, y, str, &_color, _effectType, bounds);
     }
 }
 

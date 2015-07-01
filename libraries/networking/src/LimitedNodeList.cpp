@@ -605,9 +605,6 @@ const int NUM_BYTES_STUN_HEADER = 20;
 
 void LimitedNodeList::sendSTUNRequest() {
 
-    static quint64 lastTimeStamp = usecTimestampNow();
-    lastTimeStamp = usecTimestampNow();
-
     const int NUM_INITIAL_STUN_REQUESTS_BEFORE_FAIL = 10;
 
     if (!_hasCompletedInitialSTUN) {
@@ -746,6 +743,14 @@ void LimitedNodeList::startSTUNPublicSocketUpdate() {
         // if we don't know the STUN IP yet we need to have ourselves be called once it is known
         if (_stunSockAddr.getAddress().isNull()) {
             connect(&_stunSockAddr, &HifiSockAddr::lookupCompleted, this, &LimitedNodeList::startSTUNPublicSocketUpdate);
+
+            // in case we just completely fail to lookup the stun socket - add a 10s timeout that will trigger the fail case
+            const quint64 STUN_DNS_LOOKUP_TIMEOUT_MSECS = 10 * 1000;
+
+            QTimer* stunLookupFailTimer = new QTimer(this);
+            connect(stunLookupFailTimer, &QTimer::timeout, this, &LimitedNodeList::possiblyTimeoutSTUNAddressLookup);
+            stunLookupFailTimer->start(STUN_DNS_LOOKUP_TIMEOUT_MSECS);
+
         } else {
             // setup our initial STUN timer here so we can quickly find out our public IP address
             _initialSTUNTimer = new QTimer(this);
@@ -758,6 +763,13 @@ void LimitedNodeList::startSTUNPublicSocketUpdate() {
            // send an initial STUN request right away
            sendSTUNRequest();
         }
+    }
+}
+
+void LimitedNodeList::possiblyTimeoutSTUNAddressLookup() {
+    if (_stunSockAddr.getAddress().isNull()) {
+        // our stun address is still NULL, but we've been waiting for long enough - time to force a fail
+        stopInitialSTUNUpdate(false);
     }
 }
 
@@ -779,8 +791,6 @@ void LimitedNodeList::stopInitialSTUNUpdate(bool success) {
 
         flagTimeForConnectionStep(ConnectionStep::SetPublicSocketFromSTUN);
     }
-
-    assert(_initialSTUNTimer);
 
     // stop our initial fast timer
     if (_initialSTUNTimer) {
