@@ -17,6 +17,7 @@
 #include <QTextStream>
 #include <QtDebug>
 #include <QtEndian>
+#include <QImage>
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -1455,6 +1456,62 @@ void buildModelMesh(ExtractedMesh& extracted) {
 #endif // USE_MODEL_MESH
 
 
+// This function checks whether the alpha channel of the image is used or not.
+// (If the alpha channel is not present, the function still works fine: hasAlphaChannel would be redundant)
+bool checkAlpha(QImage image) {
+
+    int width = image.width();
+    int height = image.height();
+    bool isUsed = false;
+
+    for (int w = 0; w < width && !isUsed; w++) {
+        for (int h = 0; h < height && !isUsed; h++) {
+            QRgb color = image.pixel(w, h);
+            QColor qcol = QColor(color);
+            int alpha = qAlpha(color);
+            if (alpha != 255){
+                isUsed = true;
+            }
+        }
+    }
+
+    return isUsed;
+}
+
+// This function combines the diffuse map and the opacity map.
+// It returns the resulting image with the computed alpha channel.
+QImage combineDiffuseOpacity(QImage imageDiff, QImage imageOpa) {
+
+    if (imageDiff.format() != QImage::Format_ARGB32) {
+        imageDiff = imageDiff.convertToFormat(QImage::Format_ARGB32);
+    }
+
+    int widthOpa = imageOpa.width();
+    int heightOpa = imageOpa.height();
+    int widthDiff = imageDiff.width();
+    int heightDiff = imageDiff.height();
+
+    // In order to obtain correct results, the two image must have the same size.
+    // Moreover, the opacity map must be in grayscale. 
+    // Otherwise the original diffuse map will be returned without modifications.
+    if (widthOpa == widthDiff && heightOpa == heightDiff && imageOpa.isGrayscale()) {
+        for (int w = 0; w < widthOpa; w++) {
+            for (int h = 0; h < heightOpa; h++) {
+                QRgb pxOpa = imageOpa.pixel(w, h);
+                int red = qRed(pxOpa); // As the opacity map is in grayscale, red value is equal to blue and green values.
+                QRgb pxdiff = imageDiff.pixel(w, h);
+                QColor color = QColor(pxdiff);
+                
+                // The alpha value of the diffuse image pixel is set to the intensity 
+                // of gray (red/green/blue) of the corresponding pixel in the opacity image.
+                color.setAlpha(red);
+                imageDiff.setPixel(w, h, color.rgba());
+            }
+        }
+    }
+
+    return imageDiff;
+}
 
 FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping, bool loadLightmaps, float lightmapLevel) {
     QHash<QString, ExtractedMesh> meshes;
@@ -1475,6 +1532,7 @@ FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping,
     QHash<QString, Material> materials;
     QHash<QString, QString> typeFlags;
     QHash<QString, QString> diffuseTextures;
+    QHash<QString, QString> opacityTextures;
     QHash<QString, QString> bumpTextures;
     QHash<QString, QString> specularTextures;
     QHash<QString, QString> emissiveTextures;
@@ -1483,6 +1541,8 @@ FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping,
     QHash<QString, QString> xComponents;
     QHash<QString, QString> yComponents;
     QHash<QString, QString> zComponents;
+
+    bool isTransparent = false;
 
     std::map<QString, FBXLight> lights;
 
@@ -2071,6 +2131,11 @@ FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping,
 
                         } else if (loadLightmaps && type.contains("ambient")) {
                             ambientTextures.insert(getID(connection.properties, 2), getID(connection.properties, 1));
+
+                        } else if (type.contains("transparencyfactor")) {
+                            opacityTextures.insert(getID(connection.properties, 2), getID(connection.properties, 1));
+                            isTransparent = true;
+
                         } else {
                             QString typenam = type.data();
                             counter++;
@@ -2309,9 +2374,39 @@ FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping,
                 bool detectDifferentUVs = false;
                 FBXTexture diffuseTexture;
                 QString diffuseTextureID = diffuseTextures.value(childID);
+
                 if (!diffuseTextureID.isNull()) {
                     diffuseTexture = getTexture(diffuseTextureID, textureNames, textureFilenames, textureContent, textureParams);
-                    
+
+                    if (isTransparent) {
+                        QImage diffuseMap;
+                        QByteArray diffuseByteArray = diffuseTexture.content;						
+                        diffuseMap.loadFromData(diffuseByteArray);
+
+                        // If a transparencyfactor is present, it is not sure that an opacity map is used. 
+                        // The diffuseMap could already have a transparency from its alpha channel, if the alpha 
+                        // channel is not used (or not present), the transaprencyfactor is due to the presence of an opacity map.
+                        if (!checkAlpha(diffuseMap)) {
+                            FBXTexture opacityTexture;
+                            QString opacityTextureID = opacityTextures.value(childID);
+                            if (!opacityTextureID.isNull()) {
+                                opacityTexture = getTexture(opacityTextureID, textureNames, textureFilenames, textureContent, textureParams);
+                                QImage opacityMap;
+                                QByteArray opacityByteArray = opacityTexture.content;								
+                                opacityMap.loadFromData(opacityByteArray);
+                                
+                                diffuseMap = combineDiffuseOpacity(diffuseMap, opacityMap);
+
+                                // Overwriting the new diffuseMap with the alpha channel in the diffuseTexture.content.
+                                QBuffer buffer(&diffuseTexture.content);
+                                buffer.open(QIODevice::WriteOnly);
+                                diffuseMap.save(&buffer, "PNG");
+                                buffer.close();
+                            }
+                        }
+                    }
+
+
                     // FBX files generated by 3DSMax have an intermediate texture parent, apparently
                     foreach (const QString& childTextureID, childMap.values(diffuseTextureID)) {
                         if (textureFilenames.contains(childTextureID)) {
@@ -2322,7 +2417,7 @@ FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping,
 
                     detectDifferentUVs = (diffuseTexture.texcoordSet != 0) || (!diffuseTexture.transform.isIdentity());
                 }
-                
+
                 FBXTexture normalTexture;
                 QString bumpTextureID = bumpTextures.value(childID);
                 if (!bumpTextureID.isNull()) {
