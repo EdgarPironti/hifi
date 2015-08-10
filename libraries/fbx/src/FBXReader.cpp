@@ -40,6 +40,8 @@
 
 using namespace std;
 
+const int RGBA_MAX = 255;
+
 struct TextureParam {
     glm::vec2 UVTranslation;
     glm::vec2 UVScaling;
@@ -1552,7 +1554,7 @@ bool checkAlpha(QImage image) {
         for (int j = 0; j < height && !isUsed; j++) {
             QRgb color = image.pixel(i, j);
             int alpha = qAlpha(color);
-            if (alpha != 255){
+            if (alpha != RGBA_MAX){
                 isUsed = true;
             }
         }
