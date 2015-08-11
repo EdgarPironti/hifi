@@ -1544,27 +1544,28 @@ string getFileExtension(const string& filename) {
 }
 
 // This function checks whether the alpha channel of the image is used or not.
-// (If the alpha channel is not present, the function still works fine: hasAlphaChannel() would be redundant)
-bool checkAlpha(QImage image) {
+bool checkAlpha(const QImage& image) {
+
+    if (!image.hasAlphaChannel()) {
+        return false;
+    }
+
     int width = image.width();
     int height = image.height();
-    bool isUsed = false;
 
-    for (int i = 0; i < width && !isUsed; i++) {
-        for (int j = 0; j < height && !isUsed; j++) {
-            QRgb color = image.pixel(i, j);
-            int alpha = qAlpha(color);
-            if (alpha != RGBA_MAX){
-                isUsed = true;
+    for (int i = 0; i < width; i++) {
+        for (int j = 0; j < height; j++) {
+            if (qAlpha(image.pixel(i, j)) != RGBA_MAX) {
+                return true;
             }
         }
     }
-    return isUsed;
+    return false;
 }
 
 // This function combines the diffuse map and the opacity map.
 // It returns the resulting image with the computed alpha channel.
-QImage combineDiffuseOpacity(QImage imageDiff, QImage imageOpa) {
+void addOpacity(QImage& imageDiff, const QImage& imageOpa) {
 
     if (imageDiff.format() != QImage::Format_ARGB32) {
         imageDiff = imageDiff.convertToFormat(QImage::Format_ARGB32);
@@ -1592,7 +1593,6 @@ QImage combineDiffuseOpacity(QImage imageDiff, QImage imageOpa) {
             }
         }
     }
-    return imageDiff;
 }
 
 FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping, const QString& url, bool loadLightmaps, float lightmapLevel) {
@@ -2473,7 +2473,7 @@ FBXGeometry extractFBXGeometry(const FBXNode& node, const QVariantHash& mapping,
                                 QByteArray opacityByteArray = opacityTexture.content;
                                 opacityMap.loadFromData(opacityByteArray);
 
-                                diffuseMap = combineDiffuseOpacity(diffuseMap, opacityMap);
+                                addOpacity(diffuseMap, opacityMap);
 
                                 // Overwriting the diffuse texture.
                                 string textureExtension(getFileExtension(diffuseTexture.filename.data()));
