@@ -27,6 +27,8 @@
     var deltaLY = 0;
     var deltaRX = 0;
     var deltaRY = 0;
+    var radius;
+    var inspectingEntity = null;
     
     var MIN_DIMENSION_THRESHOLD = null;
     var MAX_DIMENSION_THRESHOLD = null;
@@ -73,7 +75,9 @@
             Entities.editEntity(this.entityID, { ignoreForCollisions: false });
             Entities.editEntity(this.entityID, { dimensions: originalDimensions });
             if (inspecting) {
-                inspecting = false;                
+                inspecting = false;
+                //deletentityforinspecting
+                Entities.deleteEntity(inspectingEntity);
                 Controller.disableMapping(MAPPING_NAME);
             } else if (onShelf === true) {
                 //create a copy of this entity if it is the first grab
@@ -85,18 +89,14 @@
                     position: entityProperties.position,
                     dimensions: entityProperties.dimensions,
                     rotation: entityProperties.rotation,
-                    collisionsWillMove: true,
+                    collisionsWillMove: false,
                     ignoreForCollisions: true,
                     modelURL: entityProperties.modelURL,
                     shapeType: entityProperties.shapeType,
                     originalTextures: entityProperties.originalTextures,
                     script: entityProperties.script,
-                    // userData: JSON.stringify({
-                        // ownerKey: {
-                            // ownerID: null
-                        // }
-                    // })
                 });
+                
                 onShelf = false;
                 setEntityCustomData('ownerKey', this.entityID, {
                     ownerID: MyAvatar.sessionUUID
@@ -152,8 +152,9 @@
                     
                     MIN_DIMENSION_THRESHOLD = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions)/2;
                     MAX_DIMENSION_THRESHOLD = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions)*2;
-                    var radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
-                    newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
+                    radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
+                    // newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
+                    
                     
                     var mapping = Controller.newMapping(MAPPING_NAME);
                     mapping.from(Controller.Standard.LX).to(function (value) {
@@ -169,6 +170,29 @@
                         deltaRY = value;
                     });
                     Controller.enableMapping(MAPPING_NAME);
+                    
+                    var entityProperties = Entities.getEntityProperties(this.entityID);
+                
+                    inspectingEntity = Entities.addEntity({
+                        type: "Box",
+                        name: "inspectionEntity",
+                        position: entityProperties.position,
+                        dimensions: entityProperties.dimensions,
+                        rotation: entityProperties.rotation,
+                        collisionsWillMove: false,
+                        ignoreForCollisions: true,
+                        visible: false,
+                        script: "C:\\Users\\Proprietario\\Desktop\\shopInspectionEntityScript.js", // I don't know, ask desktop
+                        userData: JSON.stringify({
+                            ownerKey: {
+                                ownerID: MyAvatar.sessionUUID
+                            },
+                            itemKey: {
+                                itemID: this.entityID
+                            }
+                        })
+                    });
+                    
                 } else {
                     Entities.deleteEntity(this.entityID);
                 }
@@ -176,7 +200,7 @@
         
         },
 
-        collisionWithEntity: function(myID, otherID, collisionInfo) { 
+        collisionWithEntity: function(myID, otherID, collisionInfo) {
             //print("SHOE COLLISION: " + collisionInfo.penetration.x + " - " + collisionInfo.penetration.y + " - " + collisionInfo.penetration.z);
             //var penetrationValue = collisionInfo.penetration.x + collisionInfo.penetration.y + collisionInfo.penetration.z;
             var penetrationValue = Vec3.length(collisionInfo.penetration);
@@ -192,6 +216,10 @@
         
         orientationPositionUpdate: function() {
             //position
+            //var radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
+            //newPosition = Vec3.sum(MyAvatar.getHeadPosition(), Vec3.multiply(Quat.getFront(MyAvatar.orientation), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
+            newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
+                    
             Entities.editEntity(_this.entityID, { position: newPosition });
             //orientation
             var newRotation = Quat.multiply(Entities.getEntityProperties(_this.entityID).rotation, Quat.fromPitchYawRollDegrees(deltaLY*10, deltaLX*10, 0))
@@ -206,7 +234,7 @@
         },
         
         unload: function (entityID) {
-            //Script.update.disconnect(update);
+            Script.update.disconnect(update);
         }
     };
 

@@ -3,6 +3,7 @@
 (function() {
     HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    COMFORT_ARM_LENGTH = 0.5;
 
     var _this;
     var cartIsMine = false;
@@ -42,7 +43,6 @@
             var ownerObj = getEntityCustomData('ownerKey', this.entityID, null);
             if (ownerObj.ownerID === MyAvatar.sessionUUID) {
                 cartIsMine = true;
-                originalY = Entities.getEntityProperties(_this.entityID).position.y;
                 cartTargetPosition = Entities.getEntityProperties(_this.entityID).position; //useful if the entity script is assigned manually
                 Script.update.connect(update);
                 print("PRELOAD USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
@@ -59,17 +59,16 @@
         followAvatar: function() {
             if (Vec3.length(MyAvatar.getVelocity()) > 0.1) {
                 //update cart target position and orientation
-                var radius = Vec3.length(Entities.getEntityProperties(_this.entityID).dimensions) ;
-                var targetPositionPrecomputing = {x: MyAvatar.position.x, y: originalY, z: MyAvatar.position.z};
+                var radius = (Entities.getEntityProperties(_this.entityID).dimensions.x) / 2 + COMFORT_ARM_LENGTH;
+                //Vec3.length(Entities.getEntityProperties(_this.entityID).dimensions) / 2.0; //old radius
+                var properY = MyAvatar.position.y + ((MyAvatar.getHeadPosition().y - MyAvatar.position.y) / 2);
+                var targetPositionPrecomputing = {x: MyAvatar.position.x, y: properY, z: MyAvatar.position.z};
                 cartTargetPosition = Vec3.sum(targetPositionPrecomputing, Vec3.multiply(Quat.getRight(MyAvatar.orientation), radius));
-                
-                cartTargetRotation = MyAvatar.orientation;
-                Entities.editEntity(_this.entityID, { rotation: cartTargetRotation }); //remove this if the smooth rotation works
-            }
+                }
             
             var cartPosition = Entities.getEntityProperties(_this.entityID).position;
             var positionDifference = Vec3.subtract(cartTargetPosition, cartPosition);
-            if (Vec3.length(positionDifference) > 0.1) {
+            if (Vec3.length(positionDifference) > 0.01) {
                 //give to the cart the proper velocity
                 //print("fixing position - difference is: " + Vec3.length(positionDifference));
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
@@ -82,31 +81,15 @@
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
                 Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
             }
-            
-            //FIX ME: smooth rotation doesn't work properly
-            // var cartRotation = Entities.getEntityProperties(_this.entityID).rotation;
-            // var orientationDifference = Vec3.subtract(Quat.safeEulerAngles(cartTargetRotation), Quat.safeEulerAngles(cartRotation));
-            // if (orientationDifference.y > 0.02) {
-                // print("fixing orientation - difference is: " + orientationDifference.y);
-                // //give to the cart the proper angular velocity
-                // var newAngularVelocity = orientationDifference;
-                // newAngularVelocity.x = newAngularVelocity.z = 0.0;
-                // newAngularVelocity.y = orientationDifference.y / 10;
-                // Entities.editEntity(_this.entityID, { angularVelocity : newAngularVelocity });
-            // }  else if (orientationDifference.y != 0.0) {
-                // //set the orientation
-                // print("setting orientation - difference is: " + orientationDifference.y);
-                // Entities.editEntity(_this.entityID, { rotation: cartTargetRotation });
-            // }
-            
         },
         
         resetCart: function (entityID) {
             
             print("RESET CART - USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
-            print("itemsQuantity before: " + itemsQuantity);
+            
+            print("itemsQuantity before: " + itemsID.length);
             if (itemsID.length != 0) {
-                // Delete all the item (entity)
+                // Delete all the items (entities)
                 for (var i=0; i < itemsID.length; i++) {
                     Entities.deleteEntity(itemsID[i]);
                 }
@@ -126,8 +109,7 @@
                 
                 print("userData clean");
                 itemsID = [];
-                itemsQuantity = itemsID.length;
-                print("itemsQuantity after: " + itemsQuantity);
+                print("itemsQuantity after: " + itemsID.length);
                 
                 // Clean the relativePostion array
                 relativeItemsPosition = [];
@@ -177,7 +159,7 @@
                 // if itemsQuantity == fullCart resize all the items present in the cart and change the scaleFactor for this and next insert
 
                 print("Going to put item in the cart!");
-                itemsQuantity = itemsID.length;
+                var itemsQuantity = itemsID.length;
                 
                 itemsID[itemsQuantity] = data.id;
                 
@@ -185,7 +167,7 @@
                 Entities.editEntity(data.id, { dimensions: Vec3.multiply(oldDimension, scaleFactor) });
                 print("Item resized!");
                 
-                Entities.editEntity(data.id, { velocity: MyAvatar.getVelocity() });
+                Entities.editEntity(data.id, { velocity: MyAvatar.getVelocity() }); // MyAvatar.getVelocity() should be zero at this time
                 var oldPosition = Entities.getEntityProperties(data.id).position;
                 var cartPosition = Entities.getEntityProperties(this.entityID).position;
                 relativeItemsPosition[itemsQuantity] = Vec3.subtract(oldPosition, cartPosition);
@@ -193,7 +175,7 @@
                 
                 // debug prints
                 //Vec3.print("Relative position saved: ", relativeItemsPosition[(itemsQuantity === 1) ? itemsQuantity : itemsQuantity.num]);      
-                itemsQuantity ++;
+                itemsQuantity = itemsID.length;
                 print("Item " + itemsQuantity + itemsID[itemsQuantity-1] + " inserted! New quantity: " + itemsQuantity);
                 relativeItemsPosition.forEach( function(p) { Vec3.print("", p) });
                 
@@ -205,7 +187,7 @@
             }else {
                 print("Not your cart!");
                 Entities.deleteEntity(data.id);
-            }            
+            }
         },
         
         unload: function (entityID) {
@@ -213,6 +195,7 @@
             if(cartIsMine){
                 Script.update.disconnect(update);
                 _this.resetCart();  //useful if the script is reloaded manually
+                Entities.deleteEntity(_this.entityID);
             }
         }
     };
