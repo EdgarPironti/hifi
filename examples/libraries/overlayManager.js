@@ -364,6 +364,7 @@
         findOnRay: function(pickRay, knownOverlaysOnly, searchList) {
             var rayPickResult = Overlays.findRayIntersection(pickRay);
             if (rayPickResult.intersects) {
+                Vec3.print("intersection: ", rayPickResult.intersection);
                 return findOverlay(rayPickResult.overlayID, knownOverlaysOnly, searchList);
             }
             return null;

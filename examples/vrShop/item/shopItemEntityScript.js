@@ -12,13 +12,19 @@
 //
 
 (function() {
+    //we're at hifi\examples\vrShop\item\
+    
     var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
-    //Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
+    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
+    var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
+    Script.include(utilitiesScript);
+    Script.include(overlayManagerScript);
+    var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
     //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");
     //Script.include('../libraries/overlayManager.js'); //doesn't work
-    Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
-    
+    //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
+    //Script.include("http://s3.amazonaws.com/hifi-public/scripts/libraries/overlayManager.js");
     
     
     var TOOL_ICON_URL = HIFI_PUBLIC_BUCKET + "images/tools/";
@@ -176,7 +182,8 @@
                     collisionsWillMove: false,
                     ignoreForCollisions: false,
                     visible: false,
-                    script: "https://hifi-content.s3.amazonaws.com/alessandro/dev/JS/Inspect/shopInspectEntityScript.js", // I don't know, ask desktop
+                    //script: "https://hifi-content.s3.amazonaws.com/alessandro/dev/JS/Inspect/shopInspectEntityScript.js", // I don't know, ask desktop
+                    script: inspectEntityScript,
                     userData: JSON.stringify({
                         ownerKey: {
                             ownerID: MyAvatar.sessionUUID
@@ -227,25 +234,25 @@
                 
                 
                 //var url = Window.prompt("Insert the url of the JSON: ","");
-                var url = "atp://ead2a69e8e0d7b9d9a443e85f4b588f7daeda54c8a20a0dc5b88e6e33c13a398.txt";
+                //var url = "atp://ead2a69e8e0d7b9d9a443e85f4b588f7daeda54c8a20a0dc5b88e6e33c13a398.txt";
                 
-                 var i = 0;
+                 // var i = 0;
                 
-                //Retrieve the url from the userData
-                //var url = getEntityCustomData('jsonKey', this.entityID, null);
+                // //Retrieve the url from the userData
+                // //var url = getEntityCustomData('jsonKey', this.entityID, null);
                 
-                Assets.downloadData(url, function (data) {
-                    print("data downloaded from:" + url);
-                    //printPerformanceJSON(JSON.parse(data));
-                    var obj = JSON.parse(data);
-                    var modelURLs = obj.modelURLs;
+                // Assets.downloadData(url, function (data) {
+                    // print("data downloaded from:" + url);
+                    // //printPerformanceJSON(JSON.parse(data));
+                    // var obj = JSON.parse(data);
+                    // var modelURLs = obj.modelURLs;
                 
-                    modelURLs.forEach(function(param) {
-                        modelURLsArray[i] = param;
-                        print("url obtained: " + modelURLsArray[i]);
-                        i++;
-                    });
-                });
+                    // modelURLs.forEach(function(param) {
+                        // modelURLsArray[i] = param;
+                        // print("url obtained: " + modelURLsArray[i]);
+                        // i++;
+                    // });
+                // });
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
