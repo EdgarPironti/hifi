@@ -12,9 +12,22 @@
 //
 
 (function() {
-    HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
+    var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
-    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
+    //Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
+    //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");
+    //Script.include('../libraries/overlayManager.js'); //doesn't work
+    Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
+    
+    
+    
+    var TOOL_ICON_URL = HIFI_PUBLIC_BUCKET + "images/tools/";
+    var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspRED.png";
+    var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspGREEN.png";
+    var MIN_DIMENSION_THRESHOLD = null;
+    var MAX_DIMENSION_THRESHOLD = null;
+    var PENETRATION_THRESHOLD = 0.2;
+    var MAPPING_NAME = "controllerMapping_Inspection";
 
     var _this;
     var hand;
@@ -32,25 +45,8 @@
     var radius;
     var inspectingEntity = null;
     var inspectPanel = null;
-    
     var background = null;
-    //var backgroundGREEN = null;
-    
-    
-    var textWidth = .25;
-    var textHeight = .1;
-    var numberOfLines = 1;
-    var textMargin = 0.00625;
-    var lineHeight = (textHeight - (2 * textMargin)) / numberOfLines;
-        
-    
-    var TOOL_ICON_URL = HIFI_PUBLIC_BUCKET + "images/tools/";
-    var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/InspectionAreaRED.svg"
-    var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/InspectionAreaGREEN.svg"
-    var MIN_DIMENSION_THRESHOLD = null;
-    var MAX_DIMENSION_THRESHOLD = null;
-    var PENETRATION_THRESHOLD = 0.2;
-    var MAPPING_NAME = "controllerMapping_Inspection";
+    var modelURLsArray = [];
 
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
@@ -79,6 +75,7 @@
             MAX_DIMENSION_THRESHOLD = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions)*2;
             radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
             //inspectRadius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0; //??
+            
         },
         
         setRightHand: function () {
@@ -91,32 +88,34 @@
             hand = MyAvatar.leftHandPose;
         },
         
-        createInspectOverlay: function () {
-            print ("Create overlay");
+        createInspectOverlay: function (entityBindID) {
+            //print ("Creating overlay");
             inspectPanel = new OverlayPanel({
-                anchorPositionBinding: { avatar: "MyAvatar" },
-                //anchorRotationBinding: { avatar: "MyAvatar" },
-                offsetPosition: { x: 0, y: 0.5, z: 0.5 },
+                anchorPositionBinding: { entity: entityBindID },
+                //anchorRotationBinding: { entity: entityBindID },
+                //offsetPosition: { x: 0, y: 0, z: 0 },
                 isFacingAvatar: true
             });
             
             background = new Image3DOverlay({
                 url: RED_IMAGE_URL,
                 dimensions: {
-                    x: 0.5,
-                    y: 0.5,
+                    x: 0.6,
+                    y: 0.6,
                 },
                 isFacingAvatar: false,
-                alpha: 0.8,
+                alpha: 1,
                 ignoreRayIntersection: false,
                 offsetPosition: {
                     x: 0,
                     y: 0,
-                    z: -0.001
+                    z: 0
                 },
             });
             
             inspectPanel.addChild(background);
+            
+            //print ("Overlay created"); 
             
             // backgroundGREEN = new Image3DOverlay({
                 // url: GREEN_IMAGE_URL,
@@ -140,14 +139,14 @@
         
         changeOverlayColor: function () {
             if (overlayInspectRed) {
-                print ("Change color of overlay to green");
+                //print ("Change color of overlay to green");
                 overlayInspectRed = false;
                 //background.dimensions = Vec3.sum(background.dimension, { x: 1, y: 1, z: 1 });
                 // backgroundRED.visible = overlayInspectRed;
                 // backgroundGREEN.visible = !overlayInspectRed;
                 background.url = GREEN_IMAGE_URL;
             } else {
-                print ("Change color of overlay to red");
+                //print ("Change color of overlay to red");
                 overlayInspectRed = true;
                 //background.dimensions = Vec3.sum(background.dimension, { x: 1, y: 1, z: 1 });
                 // backgroundRED.visible = overlayInspectRed;
@@ -164,9 +163,6 @@
             
             // Everytime we grab, we create the inspectEntity and the inspectAreaOverlay in front of the avatar
             
-            // Create overlay
-            _this.createInspectOverlay();
-            print("Got after the creation!");
         
             if(!inspecting) {
                 var entityProperties = Entities.getEntityProperties(this.entityID);
@@ -187,17 +183,23 @@
                         },
                         itemKey: {
                             itemID: this.entityID
+                        },
+                        grabbableKey: {
+                            grabbable: false
                         }
                     })
                 });
             }
+            
+             _this.createInspectOverlay(inspectingEntity);
+            //print("Got after the creation!");
             
             if (inspecting === true) {
                 inspecting = false;
                 //deletentityforinspecting
                 Controller.disableMapping(MAPPING_NAME);
                 setEntityCustomData('statusKey', this.entityID, {
-                    status: "null"
+                    status: "inHand"
                 });
             } else if (onShelf === true) {
                 //create a copy of this entity if it is the first grab
@@ -222,11 +224,33 @@
                     ownerID: MyAvatar.sessionUUID
                 });
                 originalDimensions = entityProperties.dimensions;
+                
+                
+                //var url = Window.prompt("Insert the url of the JSON: ","");
+                var url = "atp://ead2a69e8e0d7b9d9a443e85f4b588f7daeda54c8a20a0dc5b88e6e33c13a398.txt";
+                
+                 var i = 0;
+                
+                //Retrieve the url from the userData
+                //var url = getEntityCustomData('jsonKey', this.entityID, null);
+                
+                Assets.downloadData(url, function (data) {
+                    print("data downloaded from:" + url);
+                    //printPerformanceJSON(JSON.parse(data));
+                    var obj = JSON.parse(data);
+                    var modelURLs = obj.modelURLs;
+                
+                    modelURLs.forEach(function(param) {
+                        modelURLsArray[i] = param;
+                        print("url obtained: " + modelURLsArray[i]);
+                        i++;
+                    });
+                });
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
                 setEntityCustomData('statusKey', this.entityID, {
-                    status: "null"
+                    status: "inHand"
                 });
                 var dataJSON = {
                     id: this.entityID
@@ -262,7 +286,9 @@
                 
                 var statusObj = getEntityCustomData('statusKey', this.entityID, null);
                 
-                if (statusObj.status == "inspect") { // if I'm releasing in the inspectZone
+                //print("ZONE ID NOT NULL AND STATUS IS: " + statusObj.status);
+                
+                if (statusObj.status == "inInspect") { // if I'm releasing in the inspectZone
                     inspecting = true;
                     print("released inside the inspection area");
                     
@@ -326,6 +352,16 @@
                 var newDimension = Vec3.multiply(oldDimension, scaleFactor);
                 Entities.editEntity(_this.entityID, { dimensions: newDimension });
             }
+        },
+        
+        changeModel: function(entityID, dataArray) {
+            // Change model of the entity
+            //print("Attempting to change model by: " + dataArray[0]);
+            var data = JSON.parse(dataArray[0]);
+            var index = data.index;
+            var entityProperties = Entities.getEntityProperties(this.entityID);
+            //print("-------------  Changing the model from " + entityProperties.modelURL + " to: " + modelURLsArray[index]);
+            Entities.editEntity(this.entityID, { modelURL: modelURLsArray[index] }); // ????????
         },
         
         unload: function (entityID) {
