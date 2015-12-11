@@ -1,8 +1,13 @@
 //cart 
 
 (function() {
-    HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    //we're at hifi\examples\vrShop\cart\
+    
+    var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
+    Script.include(utilitiesScript);
+    
+    // HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
+    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
     COMFORT_ARM_LENGTH = 0.5;
 
     var _this;

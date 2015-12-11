@@ -12,12 +12,18 @@
 //
 
 (function() {
+    //we're at hifi\examples\vrShop\inspect\
+    
     var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
-    //Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
+    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
     //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");    //doesn't work
     //Script.include('../libraries/overlayManager.js'); //doesn't work
-    Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
+    //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
+    var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
+    var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
+    Script.include(utilitiesScript);
+    Script.include(overlayManagerScript);
     
     //var BROWN_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-active.svg";
     var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Brown.svg";
@@ -124,6 +130,7 @@
                 this.waitingForBumpReleased = true;
                 var triggeredButton = OverlayManager.findOnRay(this.pickRay);
                 if (triggeredButton != null) {
+                    //search the index of the UI element triggered
                     for (var i = 0; i < buttons.length; i++) {
                         if (buttons[i] == triggeredButton) {
                             var dataJSON = {
@@ -131,7 +138,7 @@
                             };
                             var dataArray = [JSON.stringify(dataJSON)];
                             
-                            Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
+                            //Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
                             print("ChangeColor by ID: " + i);
                         }
                     }
@@ -255,13 +262,14 @@
                         y: 0.15
                     },
                     isFacingAvatar: false,
-                    alpha: 0.8,
+                    alpha: 0.2,
                     ignoreRayIntersection: false,
                     offsetPosition: {
                         x: offsetPositionX,
                         y: offsetPositionY - (i * offsetPositionY),
                         z: 0
                     },
+                    userData: i,
                 });
                 
                 mainPanel.addChild(buttons[i]);
