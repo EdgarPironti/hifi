@@ -14,8 +14,25 @@
 (function() {
     var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    //Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
+    //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");    //doesn't work
+    //Script.include('../libraries/overlayManager.js'); //doesn't work
+    Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
+    
+    //var BROWN_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-active.svg";
+    var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Brown.svg";
+    var RED_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Red.svg";
+    var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Black.svg";
+    
+    var ICONS = [
+        BROWN_ICON_URL,
+        RED_ICON_URL,
+        BLACK_ICON_URL
+    ];
     
     var MIN_DIMENSION_THRESHOLD = null;
+    var IN_HAND_STATUS = "inHand";
+    var IN_INSPECT_STATUS = "inInspect";
     
     var RIGHT_HAND = 1;
     var LEFT_HAND = 0;
@@ -32,13 +49,21 @@
     var PENETRATION_THRESHOLD = 0.2;
 
     var _this;
-    var startInspecting = false;
-    var handsCastRays = false;
+    var inspecting = false;
+    var isUIWorking = false;
     var inspectingMyItem = false;
     var waitingForBumpReleased = false;
     var rightController = null;     //rightController and leftController are two objects
     var leftController = null;
     var zoneID = null;
+    var inspectedEntityID = null;
+    
+    var newPosition = null;
+    var newRotation = null;
+    
+    var mainPanel = null;
+    var buttons = [];
+
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
@@ -53,13 +78,16 @@
         if (this.hand === RIGHT_HAND) {
             this.getHandPosition = MyAvatar.getRightPalmPosition;
             this.getHandRotation = MyAvatar.getRightPalmRotation;
+            this.bumper = Controller.Standard.RB;
         } else {
             this.getHandPosition = MyAvatar.getLeftPalmPosition;
             this.getHandRotation = MyAvatar.getLeftPalmRotation;
+            this.bumper = Controller.Standard.LB;
         }
         
         this.pickRay = null;        // ray object
         this.overlayLine = null;    // id of line overlay
+        this.waitingForBumpReleased = false;
         
         this.overlayLineOn = function(closePoint, farPoint, color) {
             if (this.overlayLine == null) {
@@ -79,50 +107,71 @@
            }
         },
         
-        //the update of each hand has to update the ray belonging to that hand
+        //the update of each hand has to update the ray belonging to that hand and handle the bumper event
         this.updateHand = function() {
+            //update the ray object
             this.pickRay = {
                origin: this.getHandPosition(),
                direction: Quat.getUp(this.getHandRotation())
             };
+            //update the ray overlay
             this.overlayLineOn(this.pickRay.origin, Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH)), COLOR);
+            
+            //detect the bumper event
+            //manage event on UI
+            var bumperPressed = Controller.getValue(this.bumper);
+            if (bumperPressed && !this.waitingForBumpReleased) {
+                this.waitingForBumpReleased = true;
+                var triggeredButton = OverlayManager.findOnRay(this.pickRay);
+                if (triggeredButton != null) {
+                    for (var i = 0; i < buttons.length; i++) {
+                        if (buttons[i] == triggeredButton) {
+                            var dataJSON = {
+                                index: i
+                            };
+                            var dataArray = [JSON.stringify(dataJSON)];
+                            
+                            Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
+                            print("ChangeColor by ID: " + i);
+                        }
+                    }
+                }
+            } else if (!bumperPressed && this.waitingForBumpReleased) {
+                this.waitingForBumpReleased = false;
+            }
         },
         
         this.clean = function() {
             this.pickRay = null;
-            //Overlays.deleteOverlay(this.overlayLine);
             this.overlayLine.destroy();
         }
     };
     
     function update(deltaTime) {
-        
         //the if condition should depend from other stuff
-        if (startInspecting) {
+        if (inspecting) {
             //update the rays from both hands
             leftController.updateHand();
             rightController.updateHand();
             
-            if (!handsCastRays) {
-                handsCastRays = true;
+            //check the item status for consistency
+            var entityStatus = getEntityCustomData('statusKey', inspectedEntityID, null).status;
+            if (entityStatus == IN_HAND_STATUS) {
+                //the inspection is over
+                inspecting = false;
+                inspectedEntityID = null;
             }
-
-            //manage event on UI
-            var bumperPressed = Controller.getValue(Controller.Standard.RB);
-            if (bumperPressed && !waitingForBumpReleased) {
-                print("BUMPER PRESSED");
-                waitingForBumpReleased = true;
-            } else if (!bumperPressed && waitingForBumpReleased) {
-                print("BUMPER RELEASED");
-                waitingForBumpReleased = false;
-            }
-        } else if (handsCastRays) {
+        } else if (isUIWorking) {
+            //clean all the UI stuff
+            // Destroy rays
             leftController.clean();
             rightController.clean();
-            handsCastRays = false;
+            // Destroy overlay
+            mainPanel.destroy();
+            isUIWorking = false;
         }
         
-        _this.positionUpdate();
+        _this.positionRotationUpdate();
     };
 
     InspectEntity.prototype = {
@@ -145,41 +194,84 @@
         doSomething: function (entityID, dataArray) {
             var data = JSON.parse(dataArray[0]);
             var itemOwnerObj = getEntityCustomData('ownerKey', data.id, null);
-            print("------- The owner of the item is: " + ((itemOwnerObj == null) ? itemOwnerObj : itemOwnerObj.ownerID));
-            print("item ID: " + data.id);
+            //print("------- The owner of the item is: " + ((itemOwnerObj == null) ? itemOwnerObj : itemOwnerObj.ownerID));
+            //print("item ID: " + data.id);
             
             var inspectOwnerObj = getEntityCustomData('ownerKey', this.entityID, null);
-            print("------- The owner of the inspectZone is: " + ((inspectOwnerObj == null) ? inspectOwnerObj : inspectOwnerObj.ownerID));
-            print("zone ID: " + this.entityID);
+            //print("------- The owner of the inspectZone is: " + ((inspectOwnerObj == null) ? inspectOwnerObj : inspectOwnerObj.ownerID));
+            //print("zone ID: " + this.entityID);
             
             if (inspectOwnerObj == null) {
-                print("The inspectZone doesn't have a owner.");
+                //print("The inspectZone doesn't have a owner.");
                 Entities.deleteEntity(data.id);
             }
             
             if (itemOwnerObj.ownerID === inspectOwnerObj.ownerID) {
-                startInspecting = true;
-                
+                //setup the things for inspecting the item
+                inspecting = true;
+                inspectedEntityID = data.id;        //store the ID of the inspected entity
                 setEntityCustomData('statusKey', data.id, {
-                    status: "inspect"
+                    status: IN_INSPECT_STATUS
                 });
+                //print("Set status!");
                 
-                print("Set status!");
+                _this.createInspectUI();
                 
                 Entities.editEntity(_this.entityID, { visible: false });
                 
             } else {
-                print("Not your inspect zone!");
+                //print("Not your inspect zone!");
                 Entities.deleteEntity(data.id);
             }
         },
         
-        positionUpdate: function() {
+        positionRotationUpdate: function() {
             //position
             newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius)); 
-                    
             Entities.editEntity(_this.entityID, { position: newPosition });
+            
+            newRotation = Camera.getOrientation(); 
+            Entities.editEntity(_this.entityID, { rotation: newRotation });
         },
+        
+        createInspectUI : function() {
+            //print ("Creating UI");
+            
+            //set the main panel to follow the inspect entity
+            mainPanel = new OverlayPanel({
+                anchorPositionBinding: { entity: _this.entityID },
+                isFacingAvatar: true
+            });
+            
+            var offsetPositionY = 0.2;
+            var offsetPositionX = -0.4;
+            
+            for (var i = 0; i < ICONS.length; i++) {
+                //print("creating button " + ICONS[i]);
+                buttons[i] = new Image3DOverlay({
+                    url: ICONS[i],
+                    dimensions: {
+                        x: 0.15,
+                        y: 0.15
+                    },
+                    isFacingAvatar: false,
+                    alpha: 0.8,
+                    ignoreRayIntersection: false,
+                    offsetPosition: {
+                        x: offsetPositionX,
+                        y: offsetPositionY - (i * offsetPositionY),
+                        z: 0
+                    },
+                });
+                
+                mainPanel.addChild(buttons[i]);
+            }
+            
+            
+            
+            isUIWorking = true;
+        },
+
         
         collisionWithEntity: function(myID, otherID, collisionInfo) {
             //print("SHOE COLLISION: " + collisionInfo.penetration.x + " - " + collisionInfo.penetration.y + " - " + collisionInfo.penetration.z);
@@ -191,19 +283,19 @@
                 print("Zone: " + zoneID);
                 
                 var itemObj = getEntityCustomData('itemKey', this.entityID, null);
-                print("------- The entity in the inspect zone is: " + ((itemObj == null) ? itemObj : itemObj.itemID));
+                //print("------- The entity in the inspect zone is: " + ((itemObj == null) ? itemObj : itemObj.itemID));
                 
                 if (itemObj != null) {
                     if (itemObj.itemID == otherID) {
                         // change overlay color
-                        print("Going to call the change color to red");
+                        //print("Going to call the change color to red");
                         Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
                     }
                 }
             } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null) {
                 zoneID = null;
-                print("Zone: " + zoneID);
-                print("Going to call the change color to green");
+                //print("Zone: " + zoneID);
+                //print("Going to call the change color to green");
                 Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
             }
         },
