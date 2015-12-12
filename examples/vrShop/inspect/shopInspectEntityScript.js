@@ -286,8 +286,8 @@
             OverlayManager.setPointer(new Image3DOverlay({
                 url: POINTER_ICON_URL,
                 dimensions: {
-                    x: 0.02,
-                    y: 0.02
+                    x: 0.015,
+                    y: 0.015
                 },
                 alpha: 1,
             }));
