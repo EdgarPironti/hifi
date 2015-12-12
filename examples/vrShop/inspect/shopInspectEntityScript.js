@@ -115,20 +115,26 @@
            }
         },
         
-        //the update of each hand has to update the ray belonging to that hand and handle the bumper event
-        this.updateHand = function() {
+        this.updateRay = function() {
             //update the ray object
             this.pickRay = {
                origin: this.getHandPosition(),
                direction: Quat.getUp(this.getHandRotation())
             };
-            //update the ray overlay
-            this.overlayLineOn(this.pickRay.origin, Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH)), COLOR);
+            //update the ray overlay and the pointer
+            var intersection = OverlayManager.renderPointer(this.pickRay);
+            var farPoint = intersection == null ? Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH)) : intersection;
+            this.overlayLineOn(this.pickRay.origin, farPoint, COLOR);
+            
+        },
+        //the update of each hand has to update the ray belonging to that hand and handle the bumper event
+        this.updateHand = function() {
+            
+            this.updateRay();
             
             //detect the bumper event
             //manage event on UI
             var bumperPressed = Controller.getValue(this.bumper);
-            OverlayManager.renderPointer(this.pickRay);
             if (bumperPressed && !this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = true;
                 var triggeredButton = OverlayManager.findOnRay(this.pickRay);
@@ -264,7 +270,7 @@
                         x: 0.15,
                         y: 0.15
                     },
-                    isFacingAvatar: false,
+                    isFacingAvatar: true,
                     alpha: 1,
                     ignoreRayIntersection: false,
                     offsetPosition: {
@@ -278,14 +284,12 @@
             }
             
             OverlayManager.setPointer(new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png",
+                url: POINTER_ICON_URL,
                 dimensions: {
-                    x: 0.03,
-                    y: 0.03
+                    x: 0.02,
+                    y: 0.02
                 },
-                isFacingAvatar: true,
                 alpha: 1,
-                ignoreRayIntersection: true,
             }));
             
             isUIWorking = true;
