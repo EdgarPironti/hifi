@@ -386,21 +386,25 @@
             return searchList;
         },
         renderPointer: function(pickRay) {
-            print("this.pointer - " + this.pointer);
+            print("try 9");
             if (this.pointer == null || this.pointer == undefined) {
-                return;
+                return null;
             }
             var rayPickResult = Overlays.findRayIntersection(pickRay);
             if (rayPickResult.intersects) {
-                Vec3.print("intersection: ", rayPickResult.intersection);
                 this.pointer.position = rayPickResult.intersection;
-                this.pointer.position.visible = true;
-            } else { 
-                this.pointer.position.visible = false;
+                this.pointer.visible = true;
+                return rayPickResult.intersection;
+            } else {
+                this.pointer.visible = false;
+                return null;
             }
         },
         setPointer: function(image) {
             this.pointer = image;
+            this.pointer.isFacingAvatar = true;
+            this.pointer.ignoreRayIntersection = true;
+            
         }
     };
 
