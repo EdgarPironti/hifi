@@ -270,7 +270,7 @@
                         x: 0.15,
                         y: 0.15
                     },
-                    isFacingAvatar: true,
+                    isFacingAvatar: false,
                     alpha: 1,
                     ignoreRayIntersection: false,
                     offsetPosition: {

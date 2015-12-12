@@ -364,7 +364,6 @@
         findOnRay: function(pickRay, knownOverlaysOnly, searchList) {
             var rayPickResult = Overlays.findRayIntersection(pickRay);
             if (rayPickResult.intersects) {
-                Vec3.print("intersection: ", rayPickResult.intersection);
                 return findOverlay(rayPickResult.overlayID, knownOverlaysOnly, searchList);
             }
             return null;
@@ -386,13 +385,14 @@
             return searchList;
         },
         renderPointer: function(pickRay) {
-            print("try 9");
             if (this.pointer == null || this.pointer == undefined) {
                 return null;
             }
             var rayPickResult = Overlays.findRayIntersection(pickRay);
             if (rayPickResult.intersects) {
-                this.pointer.position = rayPickResult.intersection;
+                var normal = Vec3.multiply(Quat.getFront(Camera.getOrientation()), -1);
+                var offset = Vec3.multiply(normal, 0.005);
+                this.pointer.position =  Vec3.sum(rayPickResult.intersection, offset);
                 this.pointer.visible = true;
                 return rayPickResult.intersection;
             } else {
@@ -402,7 +402,7 @@
         },
         setPointer: function(image) {
             this.pointer = image;
-            this.pointer.isFacingAvatar = true;
+            this.pointer.isFacingAvatar = false;
             this.pointer.ignoreRayIntersection = true;
             
         }
