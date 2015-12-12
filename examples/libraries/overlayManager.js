@@ -385,26 +385,22 @@
             });
             return searchList;
         },
-        renderPointer: function(pickRay){
-            print("RenderPointer");
+        renderPointer: function(pickRay) {
+            print("this.pointer - " + this.pointer);
+            if (this.pointer == null || this.pointer == undefined) {
+                return;
+            }
             var rayPickResult = Overlays.findRayIntersection(pickRay);
             if (rayPickResult.intersects) {
                 Vec3.print("intersection: ", rayPickResult.intersection);
-                new Image3DOverlay({
-                    url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png",
-                    dimensions: {
-                        x: 0.15,
-                        y: 0.15
-                    },
-                    isFacingAvatar: true,
-                    alpha: 1,
-                    ignoreRayIntersection: true,
-                    position: rayPickResult.intersection,
-                });
+                this.pointer.position = rayPickResult.intersection;
+                this.pointer.position.visible = true;
+            } else { 
+                this.pointer.position.visible = false;
             }
         },
         setPointer: function(image) {
-            
+            this.pointer = image;
         }
     };
 

@@ -277,6 +277,16 @@
                 mainPanel.addChild(buttons[i]);
             }
             
+            OverlayManager.setPointer(new Image3DOverlay({
+                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png",
+                dimensions: {
+                    x: 0.03,
+                    y: 0.03
+                },
+                isFacingAvatar: true,
+                alpha: 1,
+                ignoreRayIntersection: true,
+            }));
             
             isUIWorking = true;
         },
