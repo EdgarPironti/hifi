@@ -36,6 +36,8 @@
         BLACK_ICON_URL
     ];
     
+    var POINTER_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png";
+    
     var MIN_DIMENSION_THRESHOLD = null;
     var IN_HAND_STATUS = "inHand";
     var IN_INSPECT_STATUS = "inInspect";
@@ -126,6 +128,7 @@
             //detect the bumper event
             //manage event on UI
             var bumperPressed = Controller.getValue(this.bumper);
+            OverlayManager.renderPointer(this.pickRay);
             if (bumperPressed && !this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = true;
                 var triggeredButton = OverlayManager.findOnRay(this.pickRay);
@@ -262,19 +265,17 @@
                         y: 0.15
                     },
                     isFacingAvatar: false,
-                    alpha: 0.2,
+                    alpha: 1,
                     ignoreRayIntersection: false,
                     offsetPosition: {
                         x: offsetPositionX,
                         y: offsetPositionY - (i * offsetPositionY),
                         z: 0
                     },
-                    userData: i,
                 });
                 
                 mainPanel.addChild(buttons[i]);
             }
-            
             
             
             isUIWorking = true;

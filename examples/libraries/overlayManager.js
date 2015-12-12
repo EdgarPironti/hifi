@@ -384,6 +384,27 @@
                 searchList[object._id] = object;
             });
             return searchList;
+        },
+        renderPointer: function(pickRay){
+            print("RenderPointer");
+            var rayPickResult = Overlays.findRayIntersection(pickRay);
+            if (rayPickResult.intersects) {
+                Vec3.print("intersection: ", rayPickResult.intersection);
+                new Image3DOverlay({
+                    url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png",
+                    dimensions: {
+                        x: 0.15,
+                        y: 0.15
+                    },
+                    isFacingAvatar: true,
+                    alpha: 1,
+                    ignoreRayIntersection: true,
+                    position: rayPickResult.intersection,
+                });
+            }
+        },
+        setPointer: function(image) {
+            
         }
     };
 
