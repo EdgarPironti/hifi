@@ -14,8 +14,6 @@
 (function() {
     //we're at hifi\examples\vrShop\item\
     
-    var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     Script.include(utilitiesScript);
@@ -27,7 +25,6 @@
     //Script.include("http://s3.amazonaws.com/hifi-public/scripts/libraries/overlayManager.js");
     
     
-    var TOOL_ICON_URL = HIFI_PUBLIC_BUCKET + "images/tools/";
     var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspRED.png";
     var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspGREEN.png";
     var MIN_DIMENSION_THRESHOLD = null;

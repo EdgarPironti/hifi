@@ -12,8 +12,7 @@
 //  See the accompanying file LICENSE or http://www.apache.org/licenses/LICENSE-2.0.html
 /*global print, MyAvatar, Entities, AnimationCache, SoundCache, Scene, Camefra, Overlays, Audio, HMD, AvatarList, AvatarManager, Controller, UndoStack, Window, Account, GlobalServices, Script, ScriptDiscoveryService, LODManager, Menu, Vec3, Quat, AudioDevice, Paths, Clipboard, Settings, XMLHttpRequest, randFloat, randInt, pointInExtents, vec3equal, setEntityCustomData, getEntityCustomData */
 
-HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+Script.include("../../libraries/utils.js");
 
 
 //

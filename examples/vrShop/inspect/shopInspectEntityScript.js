@@ -14,9 +14,6 @@
 (function() {
     //we're at hifi\examples\vrShop\inspect\
     
-    var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
-    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
     //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");    //doesn't work
     //Script.include('../libraries/overlayManager.js'); //doesn't work
     //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
@@ -63,6 +60,7 @@
     var waitingForBumpReleased = false;
     var rightController = null;     //rightController and leftController are two objects
     var leftController = null;
+    var workingHand = null;
     var zoneID = null;
     var inspectedEntityID = null;
     
@@ -97,6 +95,7 @@
         this.overlayLine = null;    // id of line overlay
         this.waitingForBumpReleased = false;
         
+        
         this.overlayLineOn = function(closePoint, farPoint, color) {
             if (this.overlayLine == null) {
                 var lineProperties = {
@@ -130,11 +129,20 @@
         //the update of each hand has to update the ray belonging to that hand and handle the bumper event
         this.updateHand = function() {
             
+            //detect the bumper event
+            var bumperPressed = Controller.getValue(this.bumper);
+            if (bumperPressed && this != workingHand) {
+                workingHand.clean();
+                workingHand = this;
+                print("hand changed: " + this.hand);
+            } else if (this != workingHand) {
+                return;
+            }
+            
+            print("working hand : " +  this.hand);
             this.updateRay();
             
-            //detect the bumper event
             //manage event on UI
-            var bumperPressed = Controller.getValue(this.bumper);
             if (bumperPressed && !this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = true;
                 var triggeredButton = OverlayManager.findOnRay(this.pickRay);
@@ -180,8 +188,10 @@
         } else if (isUIWorking) {
             //clean all the UI stuff
             // Destroy rays
-            leftController.clean();
-            rightController.clean();
+            // leftController.clean();
+            // rightController.clean();
+            workingHand.clean();
+            
             // Destroy overlay
             mainPanel.destroy();
             isUIWorking = false;
@@ -201,6 +211,7 @@
             if (ownerObj.ownerID === MyAvatar.sessionUUID) {
                 rightController = new MyController(RIGHT_HAND);     //rightController and leftController are two objects
                 leftController = new MyController(LEFT_HAND);
+                workingHand = rightController;
                 inspectingMyItem = true;
                 inspectRadius = (Entities.getEntityProperties(_this.entityID).dimensions.x) / 2 + COMFORT_ARM_LENGTH;
                 Script.update.connect(update);
