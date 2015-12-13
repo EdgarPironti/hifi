@@ -134,12 +134,10 @@
             if (bumperPressed && this != workingHand) {
                 workingHand.clean();
                 workingHand = this;
-                print("hand changed: " + this.hand);
             } else if (this != workingHand) {
                 return;
             }
             
-            print("working hand : " +  this.hand);
             this.updateRay();
             
             //manage event on UI
@@ -168,6 +166,7 @@
         this.clean = function() {
             this.pickRay = null;
             this.overlayLine.destroy();
+            this.overlayLine = null;
         }
     };
     

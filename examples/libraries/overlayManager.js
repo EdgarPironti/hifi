@@ -391,7 +391,7 @@
             var rayPickResult = Overlays.findRayIntersection(pickRay);
             if (rayPickResult.intersects) {
                 var normal = Vec3.multiply(Quat.getFront(Camera.getOrientation()), -1);
-                var offset = Vec3.multiply(normal, 0.005);
+                var offset = Vec3.multiply(normal, 0.001);
                 this.pointer.position =  Vec3.sum(rayPickResult.intersection, offset);
                 this.pointer.rotation = Camera.getOrientation();
                 this.pointer.visible = true;
