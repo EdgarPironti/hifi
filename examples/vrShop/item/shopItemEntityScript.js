@@ -12,19 +12,17 @@
 //
 
 (function() {
-    //we're at hifi\examples\vrShop\item\
-    
-    var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
-    var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
-    Script.include(utilitiesScript);
-    Script.include(overlayManagerScript);
-    var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
+    var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
+    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
     //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");
     //Script.include('../libraries/overlayManager.js'); //doesn't work
     //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
     //Script.include("http://s3.amazonaws.com/hifi-public/scripts/libraries/overlayManager.js");
     
     
+    
+    var TOOL_ICON_URL = HIFI_PUBLIC_BUCKET + "images/tools/";
     var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspRED.png";
     var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspGREEN.png";
     var MIN_DIMENSION_THRESHOLD = null;
@@ -45,6 +43,7 @@
     var deltaLY = 0;
     var deltaRX = 0;
     var deltaRY = 0;
+    var availabilityNumber = 0; // FIXME we won't need this anymore
     var radius;
     var inspectingEntity = null;
     var inspectPanel = null;
@@ -179,8 +178,7 @@
                     collisionsWillMove: false,
                     ignoreForCollisions: false,
                     visible: false,
-                    //script: "https://hifi-content.s3.amazonaws.com/alessandro/dev/JS/Inspect/shopInspectEntityScript.js", // I don't know, ask desktop
-                    script: inspectEntityScript,
+                    script: "C://Users//microtel//Desktop//shopInspectEntityScript.js", // I don't know, ask desktop
                     userData: JSON.stringify({
                         ownerKey: {
                             ownerID: MyAvatar.sessionUUID
@@ -209,7 +207,7 @@
                 //create a copy of this entity if it is the first grab
                 var entityProperties = Entities.getEntityProperties(this.entityID);
                 
-                Entities.addEntity({
+                var entityOnShelf = Entities.addEntity({
                     type: entityProperties.type,
                     name: entityProperties.name,
                     position: entityProperties.position,
@@ -229,27 +227,49 @@
                 });
                 originalDimensions = entityProperties.dimensions;
                 
+                var i = 0;
                 
-                //var url = Window.prompt("Insert the url of the JSON: ","");
-                //var url = "atp://ead2a69e8e0d7b9d9a443e85f4b588f7daeda54c8a20a0dc5b88e6e33c13a398.txt";
+                //Retrieve the url from the userData
+                //var url = getEntityCustomData('jsonKey', this.entityID, null);
+                // FIXME: delete this
+                var url = "atp://72b465bed68ad9d82dc99aba9d8c2f66e451ee90ed60ac89cef49cfad3efc7a9.txt";
                 
-                 // var i = 0;
                 
-                // //Retrieve the url from the userData
-                // //var url = getEntityCustomData('jsonKey', this.entityID, null);
+                // For now we have to paste statically the availabilityNumber in the userData, with this: {"jsonKey":{"availability":4}}
+                var availabilityNumberObj = getEntityCustomData('jsonKey', this.entityID, null);
+                availabilityNumber = availabilityNumberObj.availability;
                 
-                // Assets.downloadData(url, function (data) {
-                    // print("data downloaded from:" + url);
-                    // //printPerformanceJSON(JSON.parse(data));
-                    // var obj = JSON.parse(data);
-                    // var modelURLs = obj.modelURLs;
+                //This should happen in the saveJSON.js and refreshed for the item on the shelf
+                // FIXME: delete this
+                setEntityCustomData('jsonKey', this.entityID, {
+                    availability: availabilityNumber - 1
+                });
+                // FIXME: delete this
+                setEntityCustomData('jsonKey', entityOnShelf, {
+                    availability: availabilityNumber - 1
+                });
                 
-                    // modelURLs.forEach(function(param) {
-                        // modelURLsArray[i] = param;
-                        // print("url obtained: " + modelURLsArray[i]);
-                        // i++;
-                    // });
-                // });
+                Assets.downloadData(url, function (data) {
+                    print("data downloaded from:" + url);
+                    //printPerformanceJSON(JSON.parse(data));
+                    var obj = JSON.parse(data);
+                    var modelURLs = obj.modelURLs;
+                    
+                    var dataJSON = {
+                                description: obj.itemDescription
+                    };
+                            
+                    var dataArray = [JSON.stringify(dataJSON)];
+                    
+                    // provide this info to shopInspectEntityScript
+                    Entities.callEntityMethod(inspectingEntity, 'setInspectInfo', dataArray);
+                
+                    modelURLs.forEach(function(param) {
+                        modelURLsArray[i] = param;
+                        print("url obtained: " + modelURLsArray[i]);
+                        i++;
+                    });
+                });
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
@@ -367,6 +387,7 @@
             //print("-------------  Changing the model from " + entityProperties.modelURL + " to: " + modelURLsArray[index]);
             Entities.editEntity(this.entityID, { modelURL: modelURLsArray[index] }); // ????????
         },
+        
         
         unload: function (entityID) {
             Script.update.disconnect(update);

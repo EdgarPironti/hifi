@@ -12,15 +12,12 @@
 //
 
 (function() {
-    //we're at hifi\examples\vrShop\inspect\
-    
+    var HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
+    Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
+    //Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/overlayManager.js");
     //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");    //doesn't work
     //Script.include('../libraries/overlayManager.js'); //doesn't work
-    //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
-    var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
-    var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
-    Script.include(utilitiesScript);
-    Script.include(overlayManagerScript);
+    Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
     
     //var BROWN_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-active.svg";
     var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Brown.svg";
@@ -33,8 +30,6 @@
         BLACK_ICON_URL
     ];
     
-    var POINTER_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png";
-    
     var MIN_DIMENSION_THRESHOLD = null;
     var IN_HAND_STATUS = "inHand";
     var IN_INSPECT_STATUS = "inInspect";
@@ -44,9 +39,9 @@
     
     var LINE_LENGTH = 100;
     var COLOR = {
-        red: 165,
-        green: 199,
-        blue: 218
+        red: 10,
+        green: 10,
+        blue: 255
     };
     
     var COMFORT_ARM_LENGTH = 0.5;
@@ -60,9 +55,11 @@
     var waitingForBumpReleased = false;
     var rightController = null;     //rightController and leftController are two objects
     var leftController = null;
-    var workingHand = null;
     var zoneID = null;
     var inspectedEntityID = null;
+    var itemDescriptionString = "Description not available. Try to drop and grab the item again.";
+    var availabilityNumber = 0;
+    var avatarEntity = null;
     
     var newPosition = null;
     var newRotation = null;
@@ -95,7 +92,6 @@
         this.overlayLine = null;    // id of line overlay
         this.waitingForBumpReleased = false;
         
-        
         this.overlayLineOn = function(closePoint, farPoint, color) {
             if (this.overlayLine == null) {
                 var lineProperties = {
@@ -114,38 +110,23 @@
            }
         },
         
-        this.updateRay = function() {
+        //the update of each hand has to update the ray belonging to that hand and handle the bumper event
+        this.updateHand = function() {
             //update the ray object
             this.pickRay = {
                origin: this.getHandPosition(),
                direction: Quat.getUp(this.getHandRotation())
             };
-            //update the ray overlay and the pointer
-            var intersection = OverlayManager.renderPointer(this.pickRay);
-            var farPoint = intersection == null ? Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH)) : intersection;
-            this.overlayLineOn(this.pickRay.origin, farPoint, COLOR);
-            
-        },
-        //the update of each hand has to update the ray belonging to that hand and handle the bumper event
-        this.updateHand = function() {
+            //update the ray overlay
+            this.overlayLineOn(this.pickRay.origin, Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH)), COLOR);
             
             //detect the bumper event
-            var bumperPressed = Controller.getValue(this.bumper);
-            if (bumperPressed && this != workingHand) {
-                workingHand.clean();
-                workingHand = this;
-            } else if (this != workingHand) {
-                return;
-            }
-            
-            this.updateRay();
-            
             //manage event on UI
+            var bumperPressed = Controller.getValue(this.bumper);
             if (bumperPressed && !this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = true;
                 var triggeredButton = OverlayManager.findOnRay(this.pickRay);
                 if (triggeredButton != null) {
-                    //search the index of the UI element triggered
                     for (var i = 0; i < buttons.length; i++) {
                         if (buttons[i] == triggeredButton) {
                             var dataJSON = {
@@ -153,9 +134,33 @@
                             };
                             var dataArray = [JSON.stringify(dataJSON)];
                             
-                            //Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
+                            Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
                             print("ChangeColor by ID: " + i);
                         }
+                    }
+                    
+                    if (playButton == triggeredButton) {
+                        print("Play pressed!");
+                        print(avatarEntity);
+                        
+                        var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;		
+                        // print("----------- x:" + oldDimension.x);
+                        
+                        // while (oldDimension.x == 0.10000000149011612) {
+                            // oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
+                            // Vec3.print("Old Dimensions: ", oldDimension);
+                        // }
+
+                        Vec3.print("Old Dimensions: ", oldDimension);
+                        
+                        var newDimension = Vec3.multiply(oldDimension, 0.15);
+                        Vec3.print("New Dimensions: ", newDimension);
+                        //var newDimension = {x: oldDimension.x*0.2, y: oldDimension.y*0.2, z: oldDimension.z*0.2};
+                        Entities.editEntity(avatarEntity, { dimensions: newDimension });
+                        Entities.editEntity(avatarEntity, { visible: true });
+                        //Entities.editEntity(avatarEntity, { dimensions.x: oldDimension.x*0.2});
+                    
+                        
                     }
                 }
             } else if (!bumperPressed && this.waitingForBumpReleased) {
@@ -187,11 +192,10 @@
         } else if (isUIWorking) {
             //clean all the UI stuff
             // Destroy rays
-            // leftController.clean();
-            // rightController.clean();
-            workingHand.clean();
-            
+            leftController.clean();
+            rightController.clean();
             // Destroy overlay
+            Entities.deleteEntity(avatarEntity);
             mainPanel.destroy();
             isUIWorking = false;
         }
@@ -210,7 +214,6 @@
             if (ownerObj.ownerID === MyAvatar.sessionUUID) {
                 rightController = new MyController(RIGHT_HAND);     //rightController and leftController are two objects
                 leftController = new MyController(LEFT_HAND);
-                workingHand = rightController;
                 inspectingMyItem = true;
                 inspectRadius = (Entities.getEntityProperties(_this.entityID).dimensions.x) / 2 + COMFORT_ARM_LENGTH;
                 Script.update.connect(update);
@@ -240,10 +243,12 @@
                     status: IN_INSPECT_STATUS
                 });
                 //print("Set status!");
+                var availabilityNumberObj = getEntityCustomData('jsonKey', data.id, null);
+                availabilityNumber = availabilityNumberObj.availability;
                 
                 _this.createInspectUI();
                 
-                Entities.editEntity(_this.entityID, { visible: false });
+                //Entities.editEntity(_this.entityID, { visible: true });
                 
             } else {
                 //print("Not your inspect zone!");
@@ -258,6 +263,11 @@
             
             newRotation = Camera.getOrientation(); 
             Entities.editEntity(_this.entityID, { rotation: newRotation });
+
+            newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
+
+            Entities.editEntity(avatarEntity, { position: newPosition});
+            Entities.editEntity(avatarEntity, { rotation: newRotation });
         },
         
         createInspectUI : function() {
@@ -281,7 +291,7 @@
                         y: 0.15
                     },
                     isFacingAvatar: false,
-                    alpha: 1,
+                    alpha: 0.8,
                     ignoreRayIntersection: false,
                     offsetPosition: {
                         x: offsetPositionX,
@@ -292,15 +302,196 @@
                 
                 mainPanel.addChild(buttons[i]);
             }
+
+            https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png
             
-            OverlayManager.setPointer(new Image3DOverlay({
-                url: POINTER_ICON_URL,
+            aggregateScore = new Image3DOverlay({
+                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png",
                 dimensions: {
-                    x: 0.015,
-                    y: 0.015
+                    x: 0.25,
+                    y: 0.25
                 },
+                isFacingAvatar: false,
                 alpha: 1,
-            }));
+                ignoreRayIntersection: false,
+                offsetPosition: {
+                    x: 0,
+                    y: 0.27,
+                    z: 0
+                },
+            });
+            
+            mainPanel.addChild(aggregateScore);
+            
+            playButton = new Image3DOverlay({
+                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Play.png",
+                dimensions: {
+                    x: 0.08,
+                    y: 0.08
+                },
+                isFacingAvatar: false,
+                alpha: 1,
+                ignoreRayIntersection: false,
+                offsetPosition: {
+                    x: 0.42,
+                    y: 0.27,
+                    z: 0
+                },
+            });
+            
+            mainPanel.addChild(playButton);
+            
+            var textReviewerName = new Text3DOverlay({
+                    text: "Customer zero",
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: true,
+                    offsetPosition: {
+                        x: 0.23,
+                        y: 0.31,
+                        z: 0
+                    },
+                    dimensions: { x: 0, y: 0 },
+                    backgroundColor: { red: 255, green: 255, blue: 255 },
+                    color: { red: 0, green: 0, blue: 0 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.02,
+                    alpha: 1,
+                    backgroundAlpha: 0.3
+                });
+                
+            mainPanel.addChild(textReviewerName);
+            
+            reviewerScore = new Image3DOverlay({
+                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png",
+                dimensions: {
+                    x: 0.15,
+                    y: 0.15
+                },
+                isFacingAvatar: false,
+                alpha: 1,
+                ignoreRayIntersection: false,
+                offsetPosition: {
+                    x: 0.31,
+                    y: 0.26,
+                    z: 0
+                },
+            });
+            
+            mainPanel.addChild(reviewerScore);
+            
+            nextButton = new Image3DOverlay({
+                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Next.png",
+                dimensions: {
+                    x: 0.2,
+                    y: 0.2
+                },
+                isFacingAvatar: false,
+                alpha: 1,
+                ignoreRayIntersection: false,
+                offsetPosition: {
+                    x: 0.36,
+                    y: 0.18,
+                    z: 0
+                },
+            });
+            
+            
+            mainPanel.addChild(nextButton);
+            
+            var textQuantityString = new Text3DOverlay({
+                    text: "Quantity: ",
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: true,
+                    offsetPosition: {
+                        x: 0.25,
+                        y: -0.3,
+                        z: 0
+                    },
+                    dimensions: { x: 0, y: 0 },
+                    backgroundColor: { red: 255, green: 255, blue: 255 },
+                    color: { red: 0, green: 0, blue: 0 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.02,
+                    alpha: 1,
+                    backgroundAlpha: 0.3
+                });
+                
+            mainPanel.addChild(textQuantityString);
+            
+            var textQuantityNumber = new Text3DOverlay({
+                    text: availabilityNumber,
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: true,
+                    offsetPosition: {
+                        x: 0.28,
+                        y: -0.32,
+                        z: 0
+                    },
+                    dimensions: { x: 0, y: 0 },
+                    backgroundColor: { red: 255, green: 255, blue: 255 },
+                    color: { red: 0, green: 0, blue: 0 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.06,
+                    alpha: 1,
+                    backgroundAlpha: 0.3
+                });
+                
+            mainPanel.addChild(textQuantityNumber);
+            
+            var textDescription = new Text3DOverlay({
+                text: "item info: \n" + itemDescriptionString,
+                isFacingAvatar: false,
+                alpha: 1.0,
+                ignoreRayIntersection: true,
+                offsetPosition: {
+                    x: -0.2,
+                    y: -0.3,
+                    z: 0
+                },
+                dimensions: { x: 0, y: 0 },
+                backgroundColor: { red: 255, green: 255, blue: 255 },
+                color: { red: 0, green: 0, blue: 0 },
+                topMargin: 0.00625,
+                leftMargin: 0.00625,
+                bottomMargin: 0.1,
+                rightMargin: 0.00625,
+                lineHeight: 0.02,
+                alpha: 1,
+                backgroundAlpha: 0.3
+            });
+            
+            mainPanel.addChild(textDescription);
+        
+            
+            print ("GOT HERE: Descrition " + itemDescriptionString + " Availability " + availabilityNumber);
+            
+            //FIXME: remove this from here, is just for demo
+            //var entityProperties = Entities.getEntityProperties(this.entityID);
+            // Here we have to trigger the playback
+            avatarEntity = Entities.addEntity({
+                type: "Model",
+                name: "reviewerAvatar",
+                //rotation: entityProperties.rotation,
+                //dimensions: entityProperties.dimensions,
+                //naturalDimensions: 0.3,
+                collisionsWillMove: false,
+                ignoreForCollisions: true,
+                visible: false,
+                modelURL: "https://hifi-content.s3.amazonaws.com/ozan/dev/3d_marketplace/avatars/sintel/sintel_mesh.fbx"
+            });
+            
             
             isUIWorking = true;
         },
@@ -331,6 +522,16 @@
                 //print("Going to call the change color to green");
                 Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
             }
+        },
+        
+        setInspectInfo: function(entityID, dataArray) {
+            print("------------------   dataarray: " + dataArray[0]);
+            var data = JSON.parse(dataArray[0]);
+            print("------------------   data: " + data);
+            itemDescriptionString = data.description;
+            print("------------------   itemDescriptionString: " + itemDescriptionString);
+            
+            // Here we can retrieve the reviews data?
         },
         
         unload: function (entityID) {
