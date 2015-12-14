@@ -297,7 +297,7 @@
         },
         
         createInspectUI : function() {
-            //print ("Creating UI");
+            print ("Creating UI");
             
             //set the main panel to follow the inspect entity
             mainPanel = new OverlayPanel({
@@ -327,6 +327,7 @@
                 });
                 
                 mainPanel.addChild(buttons[i]);
+                print("adding button " + i);
             }
             
             OverlayManager.setPointer(new Image3DOverlay({
