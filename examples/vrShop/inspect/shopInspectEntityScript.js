@@ -44,9 +44,9 @@
     
     var LINE_LENGTH = 100;
     var COLOR = {
-        red: 10,
-        green: 10,
-        blue: 255
+        red: 165,
+        green: 199,
+        blue: 218
     };
     
     var COMFORT_ARM_LENGTH = 0.5;
