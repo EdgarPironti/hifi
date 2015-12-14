@@ -9,9 +9,9 @@ saveJSON = function() { // This has to be moved in a script for the vendor
     
     var itemInfo =  {
         "modelURLs": [
-           "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/shoe3.fbx",
-           "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/shoe4.fbx",
-           "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/shoe5.fbx"
+           "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoe_LightBrown.fbx",
+           "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoe_White.fbx",
+           "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoe_Gray.fbx"
         ],
         "itemDescription": "This item comes in three colors. \n Price: 99$ \n Shipping information: free, about two days."
     };

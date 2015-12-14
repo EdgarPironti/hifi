@@ -24,13 +24,19 @@
 
     
     //var BROWN_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-active.svg";
-    var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Brown.svg";
-    var RED_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Red.svg";
-    var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Black.svg";
+    // var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Brown.svg";
+    // var RED_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Red.svg";
+    // var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Black.svg";
+    
+    //FIX ME: these urls have to be retrieved from the json
+    var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeLightBrownPreview.png";
+    var WHITE_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeWhitePreview.png";
+    var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeGrayPreview.png";
+    
     
     var ICONS = [
         BROWN_ICON_URL,
-        RED_ICON_URL,
+        WHITE_ICON_URL,
         BLACK_ICON_URL
     ];
     
@@ -327,7 +333,6 @@
                 });
                 
                 mainPanel.addChild(buttons[i]);
-                print("adding button " + i);
             }
             
             OverlayManager.setPointer(new Image3DOverlay({
@@ -347,7 +352,7 @@
                 },
                 isFacingAvatar: false,
                 alpha: 1,
-                ignoreRayIntersection: false,
+                ignoreRayIntersection: true,
                 offsetPosition: {
                     x: 0,
                     y: 0.27,
@@ -407,7 +412,7 @@
                 },
                 isFacingAvatar: false,
                 alpha: 1,
-                ignoreRayIntersection: false,
+                ignoreRayIntersection: true,
                 offsetPosition: {
                     x: 0.31,
                     y: 0.26,
@@ -559,7 +564,7 @@
         },
         
         setInspectInfo: function(entityID, dataArray) {
-            print("------------------   dataarray: " + dataArray[0]);
+            print("------------------   dataArray: " + dataArray[0]);
             var data = JSON.parse(dataArray[0]);
             print("------------------   data: " + data);
             itemDescriptionString = data.description;

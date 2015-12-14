@@ -197,7 +197,7 @@
             }
             
             _this.createInspectOverlay(inspectingEntity);
-            //print("Got after the creation!");
+            print("Got after the creation!");
             
             if (inspecting === true) {
                 inspecting = false;
