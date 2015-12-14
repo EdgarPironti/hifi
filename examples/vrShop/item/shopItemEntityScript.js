@@ -196,7 +196,7 @@
                 });
             }
             
-             _this.createInspectOverlay(inspectingEntity);
+            _this.createInspectOverlay(inspectingEntity);
             //print("Got after the creation!");
             
             if (inspecting === true) {
@@ -207,6 +207,7 @@
                     status: "inHand"
                 });
             } else if (onShelf === true) {
+                print("creating a copy of the grabbed dentity");
                 //create a copy of this entity if it is the first grab
                 var entityProperties = Entities.getEntityProperties(this.entityID);
                 
@@ -242,6 +243,7 @@
                 var availabilityNumberObj = getEntityCustomData('jsonKey', this.entityID, null);
                 availabilityNumber = availabilityNumberObj.availability;
                 
+                print("availabilityNumber: " + availabilityNumber);
                 //This should happen in the saveJSON.js and refreshed for the item on the shelf
                 // FIXME: delete this
                 setEntityCustomData('jsonKey', this.entityID, {
@@ -251,7 +253,7 @@
                 setEntityCustomData('jsonKey', entityOnShelf, {
                     availability: availabilityNumber - 1
                 });
-                
+                print("start download");
                 Assets.downloadData(url, function (data) {
                     print("data downloaded from:" + url);
                     //printPerformanceJSON(JSON.parse(data));
