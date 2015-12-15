@@ -171,7 +171,7 @@
                         print("Play pressed!");
                         print(avatarEntity);
                         
-                        var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;		
+                        var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
                         // print("----------- x:" + oldDimension.x);
                         
                         // while (oldDimension.x == 0.10000000149011612) {
@@ -293,7 +293,11 @@
             newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius)); 
             Entities.editEntity(_this.entityID, { position: newPosition });
             
-            newRotation = Camera.getOrientation(); 
+            //newRotation = Camera.getOrientation();
+            var oldRotation = Quat.safeEulerAngles(Entities.getEntityProperties(_this.entityID).rotation); //vec3
+            var newY = Quat.safeEulerAngles(Camera.getOrientation()).y;
+            var newRotationVec3 = {x: oldRotation.x, y: newY, z: oldRotation.z};
+            newRotation = Quat.fromVec3Degrees(newRotationVec3);
             Entities.editEntity(_this.entityID, { rotation: newRotation });
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
