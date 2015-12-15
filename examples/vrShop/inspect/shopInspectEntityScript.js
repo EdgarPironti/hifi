@@ -56,7 +56,7 @@
         blue: 218
     };
     
-    var COMFORT_ARM_LENGTH = 0.2;
+    var COMFORT_ARM_LENGTH = 0.1;
     
     var PENETRATION_THRESHOLD = 0.2;
 
