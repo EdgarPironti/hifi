@@ -70,7 +70,7 @@
     var workingHand = null;
     var zoneID = null;
     var inspectedEntityID = null;
-    var itemDescriptionString = "Description not available. Try to drop and grab the item again.";
+    var itemDescriptionString = "Description not available. \n Try to drop and grab the item again.";
     var availabilityNumber = 0;
     var avatarEntity = null;
     

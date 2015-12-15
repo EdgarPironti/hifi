@@ -96,9 +96,9 @@
             //print ("Creating overlay");
             inspectPanel = new OverlayPanel({
                 anchorPositionBinding: { entity: entityBindID },
-                //anchorRotationBinding: { entity: entityBindID },
+                anchorRotationBinding: { entity: entityBindID },
                 //offsetPosition: { x: 0, y: 0, z: 0 },
-                isFacingAvatar: true
+                isFacingAvatar: false
             });
             
             background = new Image3DOverlay({
@@ -372,11 +372,11 @@
                     
             Entities.editEntity(_this.entityID, { position: newPosition });
             //orientation
-            var newRotation = Quat.multiply(Entities.getEntityProperties(_this.entityID).rotation, Quat.fromPitchYawRollDegrees(deltaLY*10, deltaLX*10, 0))
+            var newRotation = Quat.multiply(Entities.getEntityProperties(_this.entityID).rotation, Quat.fromPitchYawRollDegrees(deltaRY*10, deltaRX*10, 0))
             Entities.editEntity(_this.entityID, { rotation: newRotation });
             //zoom
             var oldDimension = Entities.getEntityProperties(_this.entityID).dimensions;
-            var scaleFactor = (deltaRY * 0.1) + 1;
+            var scaleFactor = (deltaLY * 0.1) + 1;
             if (!((Vec3.length(oldDimension) < MIN_DIMENSION_THRESHOLD && scaleFactor < 1) || (Vec3.length(oldDimension) > MAX_DIMENSION_THRESHOLD && scaleFactor > 1))) {
                 var newDimension = Vec3.multiply(oldDimension, scaleFactor);
                 Entities.editEntity(_this.entityID, { dimensions: newDimension });
