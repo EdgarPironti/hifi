@@ -293,11 +293,11 @@
             newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius)); 
             Entities.editEntity(_this.entityID, { position: newPosition });
             
-            //newRotation = Camera.getOrientation();
-            var oldRotation = Quat.safeEulerAngles(Entities.getEntityProperties(_this.entityID).rotation); //vec3
-            var newY = Quat.safeEulerAngles(Camera.getOrientation()).y;
-            var newRotationVec3 = {x: oldRotation.x, y: newY, z: oldRotation.z};
-            newRotation = Quat.fromVec3Degrees(newRotationVec3);
+            newRotation = Camera.getOrientation();
+            // var oldRotation = Quat.safeEulerAngles(Entities.getEntityProperties(_this.entityID).rotation); //vec3
+            // var newY = Quat.safeEulerAngles(Camera.getOrientation()).y;
+            // var newRotationVec3 = {x: oldRotation.x, y: newY, z: oldRotation.z};
+            // newRotation = Quat.fromVec3Degrees(newRotationVec3);
             Entities.editEntity(_this.entityID, { rotation: newRotation });
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
@@ -312,6 +312,8 @@
             //set the main panel to follow the inspect entity
             mainPanel = new OverlayPanel({
                 anchorPositionBinding: { entity: _this.entityID },
+                anchorRotationBinding: { entity: _this.entityID },
+                
                 isFacingAvatar: true
             });
             
