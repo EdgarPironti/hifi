@@ -175,7 +175,7 @@
                     type: "Box",
                     name: "inspectionEntity",
                     //position: Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius * 3.0)), // maybe we can avoid to set this here
-                    dimensions: {x: 0.5, y: 0.5, z: 0.5}, //??
+                    dimensions: {x: 0.7, y: 0.7, z: 0.7}, //??
                     //rotation: entityProperties.rotation,
                     collisionsWillMove: false,
                     ignoreForCollisions: false,
