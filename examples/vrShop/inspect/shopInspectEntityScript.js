@@ -314,7 +314,7 @@
                 anchorPositionBinding: { entity: _this.entityID },
                 anchorRotationBinding: { entity: _this.entityID },
                 
-                isFacingAvatar: true
+                isFacingAvatar: false
             });
             
             var offsetPositionY = 0.2;
