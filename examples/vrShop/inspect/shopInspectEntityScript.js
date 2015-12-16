@@ -162,7 +162,7 @@
                             };
                             var dataArray = [JSON.stringify(dataJSON)];
                             
-                            Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
+                            //Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
                             print("ChangeColor by ID: " + i);
                         }
                     }
@@ -173,11 +173,6 @@
                         
                         var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
                         // print("----------- x:" + oldDimension.x);
-                        
-                        // while (oldDimension.x == 0.10000000149011612) {
-                            // oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
-                            // Vec3.print("Old Dimensions: ", oldDimension);
-                        // }
 
                         Vec3.print("Old Dimensions: ", oldDimension);
                         
@@ -344,6 +339,7 @@
                         y: offsetPositionY - (i * offsetPositionY),
                         z: 0
                     },
+                    emissive: true,
                 });
                 
                 mainPanel.addChild(buttons[i]);
@@ -356,6 +352,7 @@
                     y: 0.015
                 },
                 alpha: 1,
+                emissive: true,
             }));
             
             aggregateScore = new Image3DOverlay({
@@ -372,6 +369,7 @@
                     y: 0.27,
                     z: 0
                 },
+                emissive: true,
             });
             
             mainPanel.addChild(aggregateScore);
@@ -390,6 +388,7 @@
                     y: 0.27,
                     z: 0
                 },
+                emissive: true,
             });
             
             mainPanel.addChild(playButton);
@@ -432,6 +431,7 @@
                     y: 0.26,
                     z: 0
                 },
+                emissive: true,
             });
             
             mainPanel.addChild(reviewerScore);
@@ -450,6 +450,7 @@
                     y: 0.18,
                     z: 0
                 },
+                emissive: true,
             });
             
             
@@ -578,6 +579,7 @@
         },
         
         setInspectInfo: function(entityID, dataArray) {
+            print("Inside setInspectInfo from ID: " + entityID);
             print("------------------   dataArray: " + dataArray[0]);
             var data = JSON.parse(dataArray[0]);
             print("------------------   data: " + data);

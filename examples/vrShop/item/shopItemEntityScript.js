@@ -115,30 +115,12 @@
                     y: 0,
                     z: 0
                 },
+                emissive: true,
             });
             
             inspectPanel.addChild(background);
             
-            //print ("Overlay created"); 
-            
-            // backgroundGREEN = new Image3DOverlay({
-                // url: GREEN_IMAGE_URL,
-                // dimensions: {
-                    // x: 0.5,
-                    // y: 0.5,
-                // },
-                // isFacingAvatar: false,
-                // alpha: 0.8,
-                // ignoreRayIntersection: false,
-                // offsetPosition: {
-                    // x: 0,
-                    // y: 0,
-                    // z: -0.001
-                // },
-                // visible: false
-            // });
-            
-            // inspectPanel.addChild(backgroundGREEN);
+            //print ("Overlay created");
         },
         
         changeOverlayColor: function () {
@@ -169,7 +151,7 @@
             
         
             if(!inspecting) {
-                var entityProperties = Entities.getEntityProperties(this.entityID);
+                var entityProperties = Entities.getEntityProperties(_this.entityID);
                 
                 inspectingEntity = Entities.addEntity({
                     type: "Box",
@@ -180,7 +162,6 @@
                     collisionsWillMove: false,
                     ignoreForCollisions: false,
                     visible: false,
-                    //script: "https://hifi-content.s3.amazonaws.com/alessandro/dev/JS/Inspect/shopInspectEntityScript.js", // I don't know, ask desktop
                     script: inspectEntityScript,
                     userData: JSON.stringify({
                         ownerKey: {
@@ -231,13 +212,13 @@
                 });
                 originalDimensions = entityProperties.dimensions;
                 
-                var i = 0;
+                
                 
                 //Retrieve the url from the userData
                 //var url = getEntityCustomData('jsonKey', this.entityID, null);
                 // FIXME: delete this
                 //var url = "atp://72b465bed68ad9d82dc99aba9d8c2f66e451ee90ed60ac89cef49cfad3efc7a9.txt";
-                /*
+                
                 var url = "atp://bd3ab1031e763419859f44e8ac5831c929ee831a2148c46166c253ddaa145a71.txt";
                 
                 // For now we have to paste statically the availabilityNumber in the userData, with this: {"jsonKey":{"availability":4}}
@@ -262,21 +243,22 @@
                     var modelURLs = obj.modelURLs;
                     
                     var dataJSON = {
-                                description: obj.itemDescription
+                        description: obj.itemDescription
                     };
-                            
                     var dataArray = [JSON.stringify(dataJSON)];
                     
                     // provide this info to shopInspectEntityScript
+                    print("calling setInspectInfo by ID: " + _this.entityID + "to" + inspectingEntity);
                     Entities.callEntityMethod(inspectingEntity, 'setInspectInfo', dataArray);
-                
+                    
+                    var i = 0;
                     modelURLs.forEach(function(param) {
                         modelURLsArray[i] = param;
                         print("url obtained: " + modelURLsArray[i]);
                         i++;
                     });
                 });
-                */
+                
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
@@ -343,10 +325,12 @@
                     inCart = true;
                 } else { // any other zone
                     Entities.deleteEntity(inspectingEntity);
+                    inspectingEntity = null;
                 }
                 
             } else { // ZoneID is null, released somewhere that is not a zone
                 Entities.deleteEntity(inspectingEntity);
+                inspectingEntity = null;
                 Entities.deleteEntity(this.entityID);
             }
         
@@ -370,8 +354,12 @@
             //position
             //var radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
             //newPosition = Vec3.sum(MyAvatar.getHeadPosition(), Vec3.multiply(Quat.getFront(MyAvatar.orientation), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
+            /*
             newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
-                    
+            */
+            var inspectingEntityPosition = Entities.getEntityProperties(inspectingEntity).position;      //at this time inspectingEntity is a valid entity
+            var inspectingEntityRotation = Entities.getEntityProperties(inspectingEntity).rotation;
+            newPosition = Vec3.sum(inspectingEntityPosition, Vec3.multiply(Quat.getFront(inspectingEntityRotation), -0.2));   //put the item near to the face of the user
             Entities.editEntity(_this.entityID, { position: newPosition });
             //orientation
             var newRotation = Quat.multiply(Entities.getEntityProperties(_this.entityID).rotation, Quat.fromPitchYawRollDegrees(deltaRY*10, deltaRX*10, 0))
