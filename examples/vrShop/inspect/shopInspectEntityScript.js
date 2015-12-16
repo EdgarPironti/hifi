@@ -275,9 +275,11 @@
                     status: IN_INSPECT_STATUS
                 });
                 //print("Set status!");
+                /*
                 var availabilityNumberObj = getEntityCustomData('jsonKey', data.id, null);
                 availabilityNumber = availabilityNumberObj.availability;
-                
+                */
+                availabilityNumber = 3;
                 _this.createInspectUI();
                 
                 //Entities.editEntity(_this.entityID, { visible: true });
@@ -290,10 +292,16 @@
         
         positionRotationUpdate: function() {
             //position
+            /*
             newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius)); 
             Entities.editEntity(_this.entityID, { position: newPosition });
             
             newRotation = Camera.getOrientation();
+            */
+            newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(MyAvatar.orientation), inspectRadius)); 
+            Entities.editEntity(_this.entityID, { position: newPosition });
+            
+            newRotation = MyAvatar.orientation;
             // var oldRotation = Quat.safeEulerAngles(Entities.getEntityProperties(_this.entityID).rotation); //vec3
             // var newY = Quat.safeEulerAngles(Camera.getOrientation()).y;
             // var newRotationVec3 = {x: oldRotation.x, y: newY, z: oldRotation.z};

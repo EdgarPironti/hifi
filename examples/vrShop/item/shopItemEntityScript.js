@@ -237,6 +237,7 @@
                 //var url = getEntityCustomData('jsonKey', this.entityID, null);
                 // FIXME: delete this
                 //var url = "atp://72b465bed68ad9d82dc99aba9d8c2f66e451ee90ed60ac89cef49cfad3efc7a9.txt";
+                /*
                 var url = "atp://bd3ab1031e763419859f44e8ac5831c929ee831a2148c46166c253ddaa145a71.txt";
                 
                 // For now we have to paste statically the availabilityNumber in the userData, with this: {"jsonKey":{"availability":4}}
@@ -275,6 +276,7 @@
                         i++;
                     });
                 });
+                */
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
