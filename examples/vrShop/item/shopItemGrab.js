@@ -444,7 +444,7 @@ function MyController(hand) {
         this.lineOff();
 
         var grabbedProperties = Entities.getEntityProperties(this.grabbedEntity, GRABBABLE_PROPERTIES);
-        this.activateEntity(this.grabbedEntity, grabbedProperties);
+        //this.activateEntity(this.grabbedEntity, grabbedProperties);
         if (grabbedProperties.collisionsWillMove && NEAR_GRABBING_KINEMATIC) {
             Entities.editEntity(this.grabbedEntity, {
                 collisionsWillMove: false
@@ -770,7 +770,7 @@ function MyController(hand) {
             }
         }
 
-        this.deactivateEntity(this.grabbedEntity);
+        //this.deactivateEntity(this.grabbedEntity);
 
         this.grabbedEntity = null;
         this.actionID = null;
