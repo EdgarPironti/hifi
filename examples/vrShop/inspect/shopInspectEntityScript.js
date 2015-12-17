@@ -75,7 +75,7 @@
     var workingHand = null;
     var zoneID = null;
     //var itemDescriptionString = "Description not available. \n Try to drop and grab the item again.";
-	//var itemDescriptionString_temp = "";
+    //var itemDescriptionString_temp = "";
     var itemDescriptionString = null;
     var availabilityNumber = 0;
     var avatarEntity = null;
@@ -86,6 +86,19 @@
     var mainPanel = null;
     var buttons = [];
     var modelURLsArray = [];
+    
+    
+    var pointer = new Image3DOverlay({          //maybe we want to use one pointer for each hand
+        url: POINTER_ICON_URL,
+        dimensions: {
+            x: 0.015,
+            y: 0.015
+        },
+        alpha: 1,
+        emissive: true,
+        isFacingAvatar: false,
+        ignoreRayIntersection: true,
+    })
 
 
     
@@ -120,7 +133,7 @@
                     start: closePoint,
                     end: farPoint,
                     color: color,
-                    ignoreRayIntersection: true, // ??
+                    ignoreRayIntersection: true,
                     visible: true,
                     alpha: 1
                 };
@@ -138,8 +151,20 @@
                direction: Quat.getUp(this.getHandRotation())
             };
             //update the ray overlay and the pointer
-            var intersection = OverlayManager.renderPointer(this.pickRay);
-            var farPoint = intersection == null ? Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH)) : intersection;
+            //var intersection = OverlayManager.renderPointer(this.pickRay);
+            
+            var rayPickResult = OverlayManager.findRayIntersection(this.pickRay);
+            if (rayPickResult.intersects) {
+                var normal = Vec3.multiply(Quat.getFront(Camera.getOrientation()), -1);
+                var offset = Vec3.multiply(normal, 0.001);
+                pointer.position =  Vec3.sum(rayPickResult.intersection, offset);       //pointer is a global Image3DOverlay
+                pointer.rotation = Camera.getOrientation();
+                pointer.visible = true;
+            } else {
+                pointer.visible = false;
+            }
+            
+            var farPoint = rayPickResult.intersects ? rayPickResult.intersection : Vec3.sum(this.pickRay.origin, Vec3.multiply(this.pickRay.direction, LINE_LENGTH));
             this.overlayLineOn(this.pickRay.origin, farPoint, COLOR);
             
         },
@@ -198,6 +223,7 @@
             this.pickRay = null;
             this.overlayLine.destroy();
             this.overlayLine = null;
+            pointer.visible = false;
         }
     };
     
@@ -357,16 +383,6 @@
                 
                 mainPanel.addChild(buttons[i]);
             }
-            
-            OverlayManager.setPointer(new Image3DOverlay({
-                url: POINTER_ICON_URL,
-                dimensions: {
-                    x: 0.015,
-                    y: 0.015
-                },
-                alpha: 1,
-                emissive: true,
-            }));
             
             aggregateScore = new Image3DOverlay({
                 url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png",

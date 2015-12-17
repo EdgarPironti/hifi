@@ -69,18 +69,20 @@
                 var properY = MyAvatar.position.y + ((MyAvatar.getHeadPosition().y - MyAvatar.position.y) / 2);
                 var targetPositionPrecomputing = {x: MyAvatar.position.x, y: properY, z: MyAvatar.position.z};
                 cartTargetPosition = Vec3.sum(targetPositionPrecomputing, Vec3.multiply(Quat.getRight(MyAvatar.orientation), radius));
-                }
+            }
             
             var cartPosition = Entities.getEntityProperties(_this.entityID).position;
             var positionDifference = Vec3.subtract(cartTargetPosition, cartPosition);
-            if (Vec3.length(positionDifference) > 0.01) {
-                //give to the cart the proper velocity
-                //print("fixing position - difference is: " + Vec3.length(positionDifference));
+            if (Vec3.length(positionDifference) > 0.1) {
+                //give to the cart the proper velocity and make it ignore for collision
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
                 Entities.editEntity(_this.entityID, { ignoreForCollisions: true });
+            } else if (Vec3.length(positionDifference) > 0.01) {
+                //give to the cart the proper velocity and make it NOT ignore for collision
+                Entities.editEntity(_this.entityID, { velocity: positionDifference });
+                Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
             } else if (Vec3.length(positionDifference) > 0) {
-                //set the position
-                //print("setting position - difference is: " + Vec3.length(positionDifference));
+                //set the position to be at the right of MyAvatar and make it NOT ignore for collision
                 Entities.editEntity(_this.entityID, { position: cartTargetPosition });
                 positionDifference = Vec3.subtract(cartTargetPosition, cartPosition);
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
@@ -200,7 +202,7 @@
             if(cartIsMine){
                 Script.update.disconnect(update);
                 _this.resetCart();  //useful if the script is reloaded manually
-                Entities.deleteEntity(_this.entityID);
+                Entities.deleteEntity(_this.entityID);        //comment for manual reload
             }
         }
     };
