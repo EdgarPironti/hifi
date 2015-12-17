@@ -45,13 +45,12 @@
     var deltaLY = 0;
     var deltaRX = 0;
     var deltaRY = 0;
-    var availabilityNumber = 0; // FIXME we won't need this anymore
+    var availabilityNumber = 20; // FIXME we won't need this anymore
     var radius;
     var inspectingEntity = null;
     var inspectPanel = null;
     var background = null;
-    var modelURLsArray = [];
-
+    
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
     DetectGrabbed = function() { 
@@ -207,8 +206,31 @@
                     status: "inHand"
                 });
             } else if (onShelf === true) {
+                
+                setEntityCustomData('statusKey', this.entityID, {
+                    status: "inHand"
+                });
+                
+                // --- Start to get information from the userData: atpurl, availability ---
+                
+                
+                //Retrieve the url from the userData of the item
+                
+                //FIXME: This should be done from the vendor automatically
+                setEntityCustomData('jsonKey', this.entityID, {
+                    modelURLs: [
+                       "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe1model.fbx",
+                       "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe2model.fbx",
+                       "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe3model.fbx"
+                    ],
+                    itemDescription: "This item comes in three colors. \n Price: 99$ \n Shipping information: free, about two days.",
+                    availability: availabilityNumber -1
+                });
+                
+                
+                // --- Create a copy of this entity if it is the first grab ---
+                
                 print("creating a copy of the grabbed dentity");
-                //create a copy of this entity if it is the first grab
                 var entityProperties = Entities.getEntityProperties(this.entityID);
                 
                 var entityOnShelf = Entities.addEntity({
@@ -225,56 +247,17 @@
                     script: entityProperties.script,
                 });
                 
+                // FIXME: delete this?
+                setEntityCustomData('jsonKey', entityOnShelf, {
+                    availability: availabilityNumber - 1
+                });
+                
                 onShelf = false;
                 setEntityCustomData('ownerKey', this.entityID, {
                     ownerID: MyAvatar.sessionUUID
                 });
                 originalDimensions = entityProperties.dimensions;
                 
-                var i = 0;
-                
-                //Retrieve the url from the userData
-                //var url = getEntityCustomData('jsonKey', this.entityID, null);
-                // FIXME: delete this
-                //var url = "atp://72b465bed68ad9d82dc99aba9d8c2f66e451ee90ed60ac89cef49cfad3efc7a9.txt";
-                var url = "atp://bd3ab1031e763419859f44e8ac5831c929ee831a2148c46166c253ddaa145a71.txt";
-                
-                // For now we have to paste statically the availabilityNumber in the userData, with this: {"jsonKey":{"availability":4}}
-                var availabilityNumberObj = getEntityCustomData('jsonKey', this.entityID, null);
-                availabilityNumber = availabilityNumberObj.availability;
-                
-                print("availabilityNumber: " + availabilityNumber);
-                //This should happen in the saveJSON.js and refreshed for the item on the shelf
-                // FIXME: delete this
-                setEntityCustomData('jsonKey', this.entityID, {
-                    availability: availabilityNumber - 1
-                });
-                // FIXME: delete this
-                setEntityCustomData('jsonKey', entityOnShelf, {
-                    availability: availabilityNumber - 1
-                });
-                print("start download");
-                Assets.downloadData(url, function (data) {
-                    print("data downloaded from:" + url);
-                    //printPerformanceJSON(JSON.parse(data));
-                    var obj = JSON.parse(data);
-                    var modelURLs = obj.modelURLs;
-                    
-                    var dataJSON = {
-                                description: obj.itemDescription
-                    };
-                            
-                    var dataArray = [JSON.stringify(dataJSON)];
-                    
-                    // provide this info to shopInspectEntityScript
-                    Entities.callEntityMethod(inspectingEntity, 'setInspectInfo', dataArray);
-                
-                    modelURLs.forEach(function(param) {
-                        modelURLsArray[i] = param;
-                        print("url obtained: " + modelURLsArray[i]);
-                        i++;
-                    });
-                });
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
@@ -337,15 +320,18 @@
                     Controller.enableMapping(MAPPING_NAME);
                 } else if (statusObj.status == "inCart") { // in cart
                     Entities.deleteEntity(inspectingEntity);
+                    inspectingEntity = null;
                     print("inCart is TRUE");
                     inCart = true;
                 } else { // any other zone
                     Entities.deleteEntity(inspectingEntity);
+                    inspectingEntity = null;
                 }
                 
             } else { // ZoneID is null, released somewhere that is not a zone
                 Entities.deleteEntity(inspectingEntity);
                 Entities.deleteEntity(this.entityID);
+                inspectingEntity = null;
             }
         
         },
@@ -381,16 +367,6 @@
                 var newDimension = Vec3.multiply(oldDimension, scaleFactor);
                 Entities.editEntity(_this.entityID, { dimensions: newDimension });
             }
-        },
-        
-        changeModel: function(entityID, dataArray) {
-            // Change model of the entity
-            //print("Attempting to change model by: " + dataArray[0]);
-            var data = JSON.parse(dataArray[0]);
-            var index = data.index;
-            var entityProperties = Entities.getEntityProperties(this.entityID);
-            //print("-------------  Changing the model from " + entityProperties.modelURL + " to: " + modelURLsArray[index]);
-            Entities.editEntity(this.entityID, { modelURL: modelURLsArray[index] }); // ????????
         },
         
         unload: function (entityID) {
