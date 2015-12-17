@@ -18,6 +18,9 @@
     var scaleFactor = 0.7; //The scale factor will dipend on the number of items in the cart. We would resize even the items already present.                
     var cartTargetPosition;
     var cartTargetRotation;
+    
+    var zoneID = null;
+    var PENETRATION_THRESHOLD = 0.2;
 
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
@@ -192,6 +195,26 @@
             }else {
                 print("Not your cart!");
                 Entities.deleteEntity(data.id);
+            }
+        },
+        
+        collisionWithEntity: function(myID, otherID, collisionInfo) {
+            var penetrationValue = Vec3.length(collisionInfo.penetration);
+            //print("Value: " +  penetrationValue);
+            if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
+                zoneID = otherID;
+                print("Zone: " + zoneID);
+                
+                var cartOwnerObj = getEntityCustomData('ownerKey', myID, null);
+                var itemOwnerObj = getEntityCustomData('ownerKey', otherID, null);
+                
+                if (itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
+                    print("----------  Going to call the inCartOverlay");
+                    Entities.callEntityMethod(otherID, 'inCartOverlay', null);
+                }
+            } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null) {
+                zoneID = null;
+                Entities.callEntityMethod(otherID, 'inCartOverlay', null);
             }
         },
         

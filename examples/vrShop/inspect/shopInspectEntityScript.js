@@ -588,7 +588,10 @@
         },
         
         changeModel: function(index) {
-            Entities.editEntity(inspectedEntityID, { modelURL: modelURLsArray[index] });
+            var entityProperties = Entities.getEntityProperties(inspectedEntityID);
+            if (entityProperties.modelURL != modelURLsArray[index]) {
+                Entities.editEntity(inspectedEntityID, { modelURL: modelURLsArray[index] });
+            }
         },
         
         unload: function (entityID) {
