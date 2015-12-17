@@ -28,11 +28,15 @@
     // var RED_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Red.svg";
     // var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Black.svg";
     
-    //FIX ME: these urls have to be retrieved from the json
-    var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeLightBrownPreview.png";
-    var WHITE_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeWhitePreview.png";
-    var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeGrayPreview.png";
+    // //FIX ME: these urls have to be retrieved from the json
+    // var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeLightBrownPreview.png";
+    // var WHITE_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeWhitePreview.png";
+    // var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeGrayPreview.png";
     
+     // //FIX ME: these urls have to be retrieved from the json
+    var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe1preview.png";
+    var WHITE_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe2preview.png";
+    var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe3preview.png";
     
     var ICONS = [
         BROWN_ICON_URL,
@@ -62,15 +66,17 @@
 
     var _this;
     var inspecting = false;
-    var isUIWorking = false;
     var inspectingMyItem = false;
+    var inspectedEntityID = null;
+    var isUIWorking = false;
     var waitingForBumpReleased = false;
     var rightController = null;     //rightController and leftController are two objects
     var leftController = null;
     var workingHand = null;
     var zoneID = null;
-    var inspectedEntityID = null;
-    var itemDescriptionString = "Description not available. \n Try to drop and grab the item again.";
+    //var itemDescriptionString = "Description not available. \n Try to drop and grab the item again.";
+	//var itemDescriptionString_temp = "";
+    var itemDescriptionString = null;
     var availabilityNumber = 0;
     var avatarEntity = null;
     
@@ -79,6 +85,8 @@
     
     var mainPanel = null;
     var buttons = [];
+    var modelURLsArray = [];
+
 
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
@@ -157,33 +165,28 @@
                     //search the index of the UI element triggered
                     for (var i = 0; i < buttons.length; i++) {
                         if (buttons[i] == triggeredButton) {
-                            var dataJSON = {
-                                index: i
-                            };
-                            var dataArray = [JSON.stringify(dataJSON)];
                             
-                            //Entities.callEntityMethod(inspectedEntityID, 'changeModel', dataArray);
+                            _this.changeModel(i);
+                            
                             print("ChangeColor by ID: " + i);
                         }
                     }
                     
                     if (playButton == triggeredButton) {
-                        print("Play pressed!");
-                        print(avatarEntity);
+                        if(avatarEntity != null) {
+                            print("Play pressed!");
+                            print(avatarEntity);
+                            
+                            var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
+                            
+                            Vec3.print("Old Dimensions: ", oldDimension);
+                            
+                            var newDimension = Vec3.multiply(oldDimension, 0.15);
+                            Vec3.print("New Dimensions: ", newDimension);
                         
-                        var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
-                        // print("----------- x:" + oldDimension.x);
-
-                        Vec3.print("Old Dimensions: ", oldDimension);
-                        
-                        var newDimension = Vec3.multiply(oldDimension, 0.15);
-                        Vec3.print("New Dimensions: ", newDimension);
-                        //var newDimension = {x: oldDimension.x*0.2, y: oldDimension.y*0.2, z: oldDimension.z*0.2};
-                        Entities.editEntity(avatarEntity, { dimensions: newDimension });
-                        Entities.editEntity(avatarEntity, { visible: true });
-                        //Entities.editEntity(avatarEntity, { dimensions.x: oldDimension.x*0.2});
-                    
-                        
+                            Entities.editEntity(avatarEntity, { dimensions: newDimension });
+                            Entities.editEntity(avatarEntity, { visible: true });
+                        }
                     }
                 }
             } else if (!bumperPressed && this.waitingForBumpReleased) {
@@ -199,12 +202,13 @@
     };
     
     function update(deltaTime) {
+        
         //the if condition should depend from other stuff
         if (inspecting) {
             //update the rays from both hands
             leftController.updateHand();
             rightController.updateHand();
-            
+
             //check the item status for consistency
             var entityStatus = getEntityCustomData('statusKey', inspectedEntityID, null).status;
             if (entityStatus == IN_HAND_STATUS) {
@@ -220,8 +224,8 @@
             workingHand.clean();
             
             // Destroy overlay
-            // Destroy overlay
             Entities.deleteEntity(avatarEntity);
+            avatarEntity = null;
             mainPanel.destroy();
             isUIWorking = false;
         }
@@ -270,11 +274,6 @@
                     status: IN_INSPECT_STATUS
                 });
                 //print("Set status!");
-                /*
-                var availabilityNumberObj = getEntityCustomData('jsonKey', data.id, null);
-                availabilityNumber = availabilityNumberObj.availability;
-                */
-                availabilityNumber = 3;
                 _this.createInspectUI();
                 
                 //Entities.editEntity(_this.entityID, { visible: true });
@@ -305,11 +304,25 @@
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
 
-            Entities.editEntity(avatarEntity, { position: newPosition});
-            Entities.editEntity(avatarEntity, { rotation: newRotation });
+            if(avatarEntity != null) {
+                Entities.editEntity(avatarEntity, { position: newPosition});
+                Entities.editEntity(avatarEntity, { rotation: newRotation });
+            }
         },
         
         createInspectUI : function() {
+            
+            var infoObj = getEntityCustomData('jsonKey', inspectedEntityID, null);
+            availabilityNumber = infoObj.availability;
+            itemDescriptionString = infoObj.itemDescription;
+            var modelURLsLoop = infoObj.modelURLs;
+            var i = 0;
+            modelURLsLoop.forEach(function(param) {
+                modelURLsArray[i] = param;
+                print("url obtained: " + modelURLsArray[i]);
+                i++;
+            });
+            
             print ("Creating UI");
             
             //set the main panel to follow the inspect entity
@@ -504,56 +517,52 @@
                 
             mainPanel.addChild(textQuantityNumber);
             
-            var textDescription = new Text3DOverlay({
-                text: "item info: \n" + itemDescriptionString,
-                isFacingAvatar: false,
-                alpha: 1.0,
-                ignoreRayIntersection: true,
-                offsetPosition: {
-                    x: -0.2,
-                    y: -0.3,
-                    z: 0
-                },
-                dimensions: { x: 0, y: 0 },
-                backgroundColor: { red: 255, green: 255, blue: 255 },
-                color: { red: 0, green: 0, blue: 0 },
-                topMargin: 0.00625,
-                leftMargin: 0.00625,
-                bottomMargin: 0.1,
-                rightMargin: 0.00625,
-                lineHeight: 0.02,
-                alpha: 1,
-                backgroundAlpha: 0.3
-            });
+            if (itemDescriptionString != null) {
+                var textDescription = new Text3DOverlay({
+                    text: "item info: \n" + itemDescriptionString,
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: true,
+                    offsetPosition: {
+                        x: -0.2,
+                        y: -0.3,
+                        z: 0
+                    },
+                    dimensions: { x: 0, y: 0 },
+                    backgroundColor: { red: 255, green: 255, blue: 255 },
+                    color: { red: 0, green: 0, blue: 0 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.02,
+                    alpha: 1,
+                    backgroundAlpha: 0.3
+                });
+                
+                mainPanel.addChild(textDescription);
+            }
             
-            mainPanel.addChild(textDescription);
         
             
             print ("GOT HERE: Descrition " + itemDescriptionString + " Availability " + availabilityNumber);
             
-            //FIXME: remove this from here, is just for demo
-            //var entityProperties = Entities.getEntityProperties(this.entityID);
+            // FIXME: remove this from here, is just for demo
             // Here we have to trigger the playback
             avatarEntity = Entities.addEntity({
                 type: "Model",
                 name: "reviewerAvatar",
-                //rotation: entityProperties.rotation,
-                //dimensions: entityProperties.dimensions,
-                //naturalDimensions: 0.3,
                 collisionsWillMove: false,
                 ignoreForCollisions: true,
                 visible: false,
                 modelURL: "https://hifi-content.s3.amazonaws.com/ozan/dev/3d_marketplace/avatars/sintel/sintel_mesh.fbx"
             });
             
-            
             isUIWorking = true;
         },
 
         
         collisionWithEntity: function(myID, otherID, collisionInfo) {
-            //print("SHOE COLLISION: " + collisionInfo.penetration.x + " - " + collisionInfo.penetration.y + " - " + collisionInfo.penetration.z);
-            //var penetrationValue = collisionInfo.penetration.x + collisionInfo.penetration.y + collisionInfo.penetration.z;
             var penetrationValue = Vec3.length(collisionInfo.penetration);
             //print("Value: " +  penetrationValue);
             if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
@@ -578,15 +587,8 @@
             }
         },
         
-        setInspectInfo: function(entityID, dataArray) {
-            print("Inside setInspectInfo from ID: " + entityID);
-            print("------------------   dataArray: " + dataArray[0]);
-            var data = JSON.parse(dataArray[0]);
-            print("------------------   data: " + data);
-            itemDescriptionString = data.description;
-            print("------------------   itemDescriptionString: " + itemDescriptionString);
-            
-            // Here we can retrieve the reviews data?
+        changeModel: function(index) {
+            Entities.editEntity(inspectedEntityID, { modelURL: modelURLsArray[index] });
         },
         
         unload: function (entityID) {
