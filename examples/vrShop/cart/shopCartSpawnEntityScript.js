@@ -16,7 +16,7 @@
 
 (function () {
     var CART_MASTER_NAME = "ShopCartZero";
-    var SCRIPT_URL = Script.include(Script.resolvePath("shopCartEntityScript.js"));
+    var SCRIPT_URL = Script.resolvePath("shopCartEntityScript.js");
     var _this;
     var isOwningACart = false;
     var cartMasterID = null;

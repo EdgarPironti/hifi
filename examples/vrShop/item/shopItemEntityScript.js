@@ -38,6 +38,7 @@
     var inspecting = false;
     var inCart = false;
     var overlayInspectRed = true;
+    var inCartOverlayToggle = false;
     var zoneID = null;
     var newPosition;
     var originalDimensions = null;
@@ -50,6 +51,7 @@
     var inspectingEntity = null;
     var inspectPanel = null;
     var background = null;
+    var textCart = null;
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
@@ -122,6 +124,58 @@
             //print ("Overlay created");
         },
         
+        createCartOverlay: function (entityBindID) {
+            //print ("Creating overlay");
+            cartPanel = new OverlayPanel({
+                anchorPositionBinding: { entity: entityBindID },
+                //anchorRotationBinding: { entity: entityBindID },
+                offsetPosition: { x: 0, y: 0.1, z: 0.1 },
+                isFacingAvatar: true,
+                
+            });
+            
+            textCart = new Text3DOverlay({
+                    text: "Store the item!",
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: true,
+                    // offsetPosition: {
+                        // x: 0,
+                        // y: 0.1,
+                        // z: 0
+                    // },
+                    dimensions: { x: 0, y: 0 },
+                    backgroundColor: { red: 255, green: 255, blue: 255 },
+                    color: { red: 0, green: 0, blue: 0 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.02,
+                    alpha: 1,
+                    backgroundAlpha: 0.3,
+                    visible: false
+                });
+            
+            cartPanel.addChild(textCart);
+            
+            //print ("Overlay created");
+        },
+        
+        
+        
+        inCartOverlay: function () {
+            if (!inCartOverlayToggle) {
+                print ("visible");
+                inCartOverlayToggle = true;
+                textCart.visible = true;
+            } else {
+                print ("not visible");
+                inCartOverlayToggle = false;
+                textCart.visible = false;
+            }
+        },
+        
         changeOverlayColor: function () {
             if (overlayInspectRed) {
                 //print ("Change color of overlay to green");
@@ -177,6 +231,7 @@
             }
             
             _this.createInspectOverlay(inspectingEntity);
+            _this.createCartOverlay(this.entityID);
             print("Got after the creation!");
             
             if (inspecting === true) {
@@ -267,6 +322,7 @@
             
             // Destroy overlay
             inspectPanel.destroy();
+            cartPanel.destroy();
             
             if (zoneID !== null) {
                 
@@ -301,6 +357,7 @@
                     });
                     Controller.enableMapping(MAPPING_NAME);
                 } else if (statusObj.status == "inCart") { // in cart
+                    inCartOverlayToggle = true;
                     Entities.deleteEntity(inspectingEntity);
                     inspectingEntity = null;
                     print("inCart is TRUE");
