@@ -202,21 +202,20 @@
         
         collisionWithEntity: function(myID, otherID, collisionInfo) {
             var penetrationValue = Vec3.length(collisionInfo.penetration);
-            //print("Value: " +  penetrationValue);
+            
+            var cartOwnerObj = getEntityCustomData('ownerKey', myID, null);
+            var itemOwnerObj = getEntityCustomData('ownerKey', otherID, null);
+            
             if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
                 zoneID = otherID;
-                print("Zone: " + zoneID);
-                
-                var cartOwnerObj = getEntityCustomData('ownerKey', myID, null);
-                var itemOwnerObj = getEntityCustomData('ownerKey', otherID, null);
-                
                 if (itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
-                    print("----------  Going to call the inCartOverlay");
-                    Entities.callEntityMethod(otherID, 'inCartOverlay', null);
+                    Entities.callEntityMethod(otherID, 'setCartOverlayVisible', null);
                 }
             } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null) {
                 zoneID = null;
-                Entities.callEntityMethod(otherID, 'inCartOverlay', null);
+                if (itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
+                    Entities.callEntityMethod(otherID, 'setCartOverlayNotVisible', null);
+                }
             }
         },
         

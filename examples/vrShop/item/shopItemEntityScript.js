@@ -38,7 +38,6 @@
     var inspecting = false;
     var inCart = false;
     var overlayInspectRed = true;
-    var inCartOverlayToggle = false;
     var zoneID = null;
     var newPosition;
     var originalDimensions = null;
@@ -129,7 +128,7 @@
             cartPanel = new OverlayPanel({
                 anchorPositionBinding: { entity: entityBindID },
                 //anchorRotationBinding: { entity: entityBindID },
-                offsetPosition: { x: 0, y: 0.1, z: 0.1 },
+                offsetPosition: { x: 0, y: 0.2, z: 0.1 },
                 isFacingAvatar: true,
                 
             });
@@ -139,11 +138,6 @@
                     isFacingAvatar: false,
                     alpha: 1.0,
                     ignoreRayIntersection: true,
-                    // offsetPosition: {
-                        // x: 0,
-                        // y: 0.1,
-                        // z: 0
-                    // },
                     dimensions: { x: 0, y: 0 },
                     backgroundColor: { red: 255, green: 255, blue: 255 },
                     color: { red: 0, green: 0, blue: 0 },
@@ -164,16 +158,12 @@
         
         
         
-        inCartOverlay: function () {
-            if (!inCartOverlayToggle) {
-                print ("visible");
-                inCartOverlayToggle = true;
-                textCart.visible = true;
-            } else {
-                print ("not visible");
-                inCartOverlayToggle = false;
-                textCart.visible = false;
-            }
+        setCartOverlayVisible: function () {
+            textCart.visible = true;
+        },
+        
+        setCartOverlayNotVisible: function () {
+            textCart.visible = false;
         },
         
         changeOverlayColor: function () {
@@ -242,7 +232,6 @@
                     status: "inHand"
                 });
             } else if (onShelf === true) {
-                
                 setEntityCustomData('statusKey', this.entityID, {
                     status: "inHand"
                 });
@@ -356,8 +345,7 @@
                         deltaRY = value;
                     });
                     Controller.enableMapping(MAPPING_NAME);
-                } else if (statusObj.status == "inCart") { // in cart
-                    inCartOverlayToggle = true;
+                } else if (statusObj.status == "inCart") {
                     Entities.deleteEntity(inspectingEntity);
                     inspectingEntity = null;
                     print("inCart is TRUE");
