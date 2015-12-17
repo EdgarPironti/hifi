@@ -21,28 +21,6 @@
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
-
-    
-    //var BROWN_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-active.svg";
-    // var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Brown.svg";
-    // var RED_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Red.svg";
-    // var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/UI_Black.svg";
-    
-    // //FIX ME: these urls have to be retrieved from the json
-    // var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeLightBrownPreview.png";
-    // var WHITE_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeWhitePreview.png";
-    // var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/elegantShoeGrayPreview.png";
-    
-     // //FIX ME: these urls have to be retrieved from the json
-    var BROWN_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe1preview.png";
-    var WHITE_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe2preview.png";
-    var BLACK_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe3preview.png";
-    
-    var ICONS = [
-        BROWN_ICON_URL,
-        WHITE_ICON_URL,
-        BLACK_ICON_URL
-    ];
     
     var POINTER_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png";
     
@@ -74,10 +52,9 @@
     var leftController = null;
     var workingHand = null;
     var zoneID = null;
-    //var itemDescriptionString = "Description not available. \n Try to drop and grab the item again.";
-    //var itemDescriptionString_temp = "";
     var itemDescriptionString = null;
-    var availabilityNumber = 0;
+    var priceNumber = -1;
+    var availabilityNumber = -1;
     var avatarEntity = null;
     
     var newPosition = null;
@@ -86,6 +63,7 @@
     var mainPanel = null;
     var buttons = [];
     var modelURLsArray = [];
+    var previewURLsArray = [];
     
     
     var pointer = new Image3DOverlay({          //maybe we want to use one pointer for each hand
@@ -338,16 +316,42 @@
         
         createInspectUI : function() {
             
-            var infoObj = getEntityCustomData('jsonKey', inspectedEntityID, null);
-            availabilityNumber = infoObj.availability;
-            itemDescriptionString = infoObj.itemDescription;
-            var modelURLsLoop = infoObj.modelURLs;
-            var i = 0;
-            modelURLsLoop.forEach(function(param) {
-                modelURLsArray[i] = param;
-                print("url obtained: " + modelURLsArray[i]);
-                i++;
-            });
+            // We want to create a UI with the information coming from the userData, provided by the vendor
+            // UserData structure:
+            // infoKey: {
+                // rootURL: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/",
+                // modelURLs: [
+                   // "sportShoe1model.fbx",
+                   // "sportShoe2model.fbx",
+                   // "sportShoe3model.fbx"
+                // ],
+                // previewURLs: [
+                    // "sportShoe1preview.png",
+                    // "sportShoe2preview.png",
+                    // "sportShoe3preview.png"
+                // ],
+                // description: descriptionValue,
+                // price: priceValue,
+                // availability: availabilityValue
+            // }
+            
+            var infoObj = getEntityCustomData('infoKey', inspectedEntityID, null);
+            
+            print("Info Obj is: " + infoObj);
+            
+            if(infoObj != null) {
+                //var modelURLsLoop = infoObj.modelURLs; ??
+                var rootURLString = infoObj.rootURL;
+                for (var i = 0; i < infoObj.modelURLs.length; i++) {
+                    modelURLsArray[i] = rootURLString + infoObj.modelURLs[i];
+                    previewURLsArray[i] = rootURLString + infoObj.previewURLs[i];
+                    print("----------------       " + modelURLsArray[i]);
+                }
+                
+                itemDescriptionString = infoObj.description;
+                priceNumber = infoObj.price;
+                availabilityNumber = infoObj.availability;
+            }
             
             print ("Creating UI");
             
@@ -362,10 +366,9 @@
             var offsetPositionY = 0.2;
             var offsetPositionX = -0.4;
             
-            for (var i = 0; i < ICONS.length; i++) {
-                //print("creating button " + ICONS[i]);
+            for (var i = 0; i < previewURLsArray.length; i++) {
                 buttons[i] = new Image3DOverlay({
-                    url: ICONS[i],
+                    url: previewURLsArray[i],
                     dimensions: {
                         x: 0.15,
                         y: 0.15
@@ -535,7 +538,7 @@
             
             if (itemDescriptionString != null) {
                 var textDescription = new Text3DOverlay({
-                    text: "item info: \n" + itemDescriptionString,
+                    text: "Price: " + priceNumber + "\nAdditional information: \n" + itemDescriptionString,
                     isFacingAvatar: false,
                     alpha: 1.0,
                     ignoreRayIntersection: true,

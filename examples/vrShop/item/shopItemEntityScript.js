@@ -45,7 +45,6 @@
     var deltaLY = 0;
     var deltaRX = 0;
     var deltaRY = 0;
-    var availabilityNumber = 20; // FIXME we won't need this anymore
     var radius;
     var inspectingEntity = null;
     var inspectPanel = null;
@@ -232,26 +231,6 @@
                     status: "inHand"
                 });
             } else if (onShelf === true) {
-                setEntityCustomData('statusKey', this.entityID, {
-                    status: "inHand"
-                });
-                
-                // --- Start to get information from the userData: atpurl, availability ---
-                
-                
-                //Retrieve the url from the userData of the item
-                
-                //FIXME: This should be done from the vendor automatically
-                setEntityCustomData('jsonKey', this.entityID, {
-                    modelURLs: [
-                       "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe1model.fbx",
-                       "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe2model.fbx",
-                       "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/sportShoe3model.fbx"
-                    ],
-                    itemDescription: "This item comes in three colors. \n Price: 99$ \n Shipping information: free, about two days.",
-                    availability: availabilityNumber -1
-                });
-                
                 
                 // --- Create a copy of this entity if it is the first grab ---
                 
@@ -270,11 +249,21 @@
                     shapeType: entityProperties.shapeType,
                     originalTextures: entityProperties.originalTextures,
                     script: entityProperties.script,
+                    userData: entityProperties.userData
                 });
                 
-                // FIXME: delete this?
-                setEntityCustomData('jsonKey', entityOnShelf, {
-                    availability: availabilityNumber - 1
+                var tempUserDataObj = JSON.parse(entityProperties.userData);
+                var availabilityNumber = tempUserDataObj.infoKey.availability;
+                
+                if (availabilityNumber > 0) {
+                    tempUserDataObj.infoKey.availability  = tempUserDataObj.infoKey.availability - 1;
+                    setEntityCustomData('infoKey', entityOnShelf, tempUserDataObj.infoKey);
+                }
+                
+                print("End of clone creation.");
+                
+                setEntityCustomData('statusKey', this.entityID, {
+                    status: "inHand"
                 });
                 
                 onShelf = false;
@@ -283,6 +272,7 @@
                 });
                 originalDimensions = entityProperties.dimensions;
                 
+                print("Status and ownerID set.");
 
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
