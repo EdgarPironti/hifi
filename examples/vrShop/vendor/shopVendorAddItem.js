@@ -17,7 +17,7 @@ var DEFAULT_PRICE = 1.00;
 var DEFAULT_DESCRIPTION = "Description empty";
 
 
-var scriptURL = Script.resolvePath("../item/shopItemEntityscript.js");
+var scriptURL = Script.resolvePath("../item/shopItemEntityScript.js");
 var rotation = Quat.safeEulerAngles(Camera.getOrientation());
 rotation = Quat.fromPitchYawRollDegrees(0, rotation.y, 0);
 var position = Vec3.sum(MyAvatar.position, Vec3.multiply(1.5, Quat.getFront(rotation)));
