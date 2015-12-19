@@ -8,7 +8,8 @@
     
     // HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
-    COMFORT_ARM_LENGTH = 0.5;
+    var COMFORT_ARM_LENGTH = 0.5;
+    var CART_REGISTER_CHANNEL = "Hifi-vrShop::";      //the ID of the cart will be appended to this channel name
 
     var _this;
     var cartIsMine = false;
@@ -18,6 +19,7 @@
     var scaleFactor = 0.7; //The scale factor will dipend on the number of items in the cart. We would resize even the items already present.                
     var cartTargetPosition;
     var cartTargetRotation;
+    var actualCartRegisterChannel = null;
     
     var zoneID = null;
     var PENETRATION_THRESHOLD = 0.2;
@@ -37,6 +39,14 @@
         }
     };
     
+    function receivingMessage(channel, message, senderID) {     //The senderID is the ID of the Avatar who runs the interface, not the ID on the entity which calls sendMessage()
+        var messageObj = JSON.parse(message);
+        if (messageObj.senderEntity != _this.entityID && channel == actualCartRegisterChannel) {
+            print("Cart received message");
+            //This means that the register wants the total price
+            _this.computeAndSendTotalPrice();
+        }
+    };
 
     ShopCart.prototype = {
 
@@ -53,6 +63,9 @@
                 cartIsMine = true;
                 cartTargetPosition = Entities.getEntityProperties(_this.entityID).position; //useful if the entity script is assigned manually
                 Script.update.connect(update);
+                actualCartRegisterChannel = CART_REGISTER_CHANNEL + this.entityID;
+                Messages.subscribe(actualCartRegisterChannel);      //subsribing to a channel to communicate with the cashRegister
+                Messages.messageReceived.connect(receivingMessage);
                 print("PRELOAD USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
             }
         },
@@ -148,6 +161,22 @@
             
             print("Number of items in cart: " + itemsID.length);
             itemsID.forEach( function(p) { print(p) });
+            
+            _this.computeAndSendTotalPrice();
+        },
+        
+        computeAndSendTotalPrice: function () {
+            var totalPrice = 0;
+            itemsID.forEach( function(itemID) {
+                var infoObj = getEntityCustomData('infoKey', itemID, null);
+                if(infoObj != null) {
+                    totalPrice += infoObj.price;
+                }
+            });
+            
+            
+            var messageObj = {senderEntity: _this.entityID, totalPrice: totalPrice};
+            Messages.sendMessage(actualCartRegisterChannel, JSON.stringify(messageObj));    //sending a json object with the ID of this entity and the price
         },
         
         doSomething: function (entityID, dataArray) {
@@ -194,11 +223,15 @@
                 });
                 
                 print("Set status!");
-            }else {
+                
+                _this.computeAndSendTotalPrice();
+            } else {
                 print("Not your cart!");
                 Entities.deleteEntity(data.id);
             }
         },
+        
+        
         
         collisionWithEntity: function(myID, otherID, collisionInfo) {
             var penetrationValue = Vec3.length(collisionInfo.penetration);
@@ -224,7 +257,9 @@
             if(cartIsMine){
                 Script.update.disconnect(update);
                 _this.resetCart();  //useful if the script is reloaded manually
-                Entities.deleteEntity(_this.entityID);        //comment for manual reload
+                //Entities.deleteEntity(_this.entityID);        //comment for manual reload
+                Messages.unsubscribe(actualCartRegisterChannel);
+                Messages.messageReceived.disconnect(receivingMessage);
             }
         }
     };

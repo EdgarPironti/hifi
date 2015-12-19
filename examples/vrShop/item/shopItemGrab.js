@@ -402,13 +402,11 @@ function MyController(hand) {
                 if (intersectionDistance <= NEAR_PICK_MAX_DISTANCE) {
                     // the hand is very close to the intersected object.  go into close-grabbing mode.
                     if (grabbableData.wantsTrigger) {
-                        print("--------------- grabbable data -> STATE_NEAR_TRIGGER");
                         this.grabbedEntity = intersection.entityID;
                         this.setState(STATE_NEAR_TRIGGER);
                         return;
                     } else if (!intersection.properties.locked) {
                         var ownerObj = getEntityCustomData('ownerKey', intersection.entityID, null);
-                        print("-----------------------  ownerID: " + ((ownerObj == null) ? ownerObj : ownerObj.ownerID));
                         
                         if (ownerObj == null || ownerObj.ownerID === MyAvatar.sessionUUID) {
                             this.grabbedEntity = intersection.entityID;
