@@ -6,7 +6,10 @@
     var AGENT_PLAYBACK_CHANNEL = "playbackChannel";
     var PLAY_MESSAGE = "Play";
     var REGISTER_NAME = "EdgarRegister"; // FIXME: Change this with the actual name
-    var CARD_ANGULAR_VELOCITY = {x:0, y:2, z:0};
+    var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
+    var CARD_POSITION_OFFSET = {x: 0, y: 0.2, z: 0};
+    var CARD_INITIAL_ORIENTATION = {x: 0, y: 0, z: 40};
+    var CARD_DIMENSIONS = {x: 0.02, y: 0.09, z: 0.15};
     var SCRIPT_URL = Script.resolvePath("shopCreditCardEntityScript.js");
     
     var cashRegisterID = null;
@@ -45,15 +48,15 @@
              
             // create card on register position
             
-            var cardPosition = Vec3.sum(Entities.getEntityProperties(cashRegisterID).position, {x : 0, y : 0.2, z : 0});
-            var cardOrientationQuat = Quat.fromVec3Degrees({x : 0, y : 0, z : 40});
+            var cardPosition = Vec3.sum(Entities.getEntityProperties(cashRegisterID).position, CARD_POSITION_OFFSET);
+            var cardOrientationQuat = Quat.fromVec3Degrees(CARD_INITIAL_ORIENTATION);
             
             cardID = Entities.addEntity({
                 type: "Model",
                 name: "CreditCard",
                 position: cardPosition,
                 rotation: cardOrientationQuat,
-                dimensions: {x : 0.02, y : 0.09, z : 0.15},
+                dimensions: CARD_DIMENSIONS,
                 collisionsWillMove: false,
                 ignoreForCollisions: false,
                 angularVelocity: CARD_ANGULAR_VELOCITY,
