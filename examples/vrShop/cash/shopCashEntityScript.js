@@ -46,12 +46,14 @@
             // create card on register position
             
             var cardPosition = Vec3.sum(Entities.getEntityProperties(cashRegisterID).position, {x : 0, y : 0.2, z : 0});
+            var cardOrientationQuat = Quat.fromVec3Degrees({x : 0, y : 0, z : 40});
             
             cardID = Entities.addEntity({
-                type: "Box",
+                type: "Model",
                 name: "CreditCard",
                 position: cardPosition,
-                dimensions: {x : 0.30, y : 0.12, z : 0.12},
+                rotation: cardOrientationQuat,
+                dimensions: {x : 0.02, y : 0.09, z : 0.15},
                 collisionsWillMove: false,
                 ignoreForCollisions: false,
                 angularVelocity: CARD_ANGULAR_VELOCITY,
@@ -61,9 +63,9 @@
                     ownerKey: {
                         ownerID: MyAvatar.sessionUUID
                     }
-                })
-                // modelURL: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/shoe4.fbx",
-                // shapeType: "box"
+                }),
+                modelURL: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/CreditCard.fbx",
+                shapeType: "box"
                 // We have to put the ownerID in the card, and check that when grabbing the card. Otherwise it cannot be grabbed
             });
             

@@ -1,6 +1,8 @@
 // shopCreditCardEntityscript.js
 //
 
+var entityProperties = null;
+
 (function() {
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
@@ -9,18 +11,18 @@
          _this = this;
     };
     
-    // function update(deltaTime) {
-        // if(inspecting){
-            // _this.orientationPositionUpdate();
-        // }
-    // };
-    
 
     DetectGrabbed.prototype = {
         
         preload: function(entityID) {
             this.entityID = entityID;
+            
         },
+        
+        // startNearGrab: function () {
+            // entityProperties = Entities.getEntityProperties(this.entityID);
+            // Vec3.print(entityProperties.position);
+        // },
 
         releaseGrab: function () {
             Entities.deleteEntity(this.entityID);
