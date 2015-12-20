@@ -5,7 +5,7 @@
     
     var AGENT_PLAYBACK_CHANNEL = "playbackChannel";
     var PLAY_MESSAGE = "Play";
-    var REGISTER_NAME = "EdgarRegister"; // FIXME: Change this with the actual name
+    var REGISTER_NAME = "Cash Register"; // FIXME: Change this with the actual name
     var CARD_ANGULAR_VELOCITY = {x:0, y:2, z:0};
     var SCRIPT_URL = Script.resolvePath("shopCreditCardEntityScript.js");
     

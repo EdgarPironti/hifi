@@ -26,7 +26,7 @@
             print("Register received message");
             print("The price is: " + messageObj.totalPrice);
             //create or update the Overlay
-            _this.cashRegisterOverlayOn(messageObj.totalPrice);
+            _this.cashRegisterOverlayOn("" + messageObj.totalPrice + " $");
             totalPrice = messageObj.totalPrice;
         }
     };
@@ -64,6 +64,8 @@
             } else {
                 print("Cart NOT found!");
                 payingAvatarID = null;
+                // Show anyway the pverlay with the price 0$
+                _this.cashRegisterOverlayOn("0 $");
             }
         },
         
@@ -71,7 +73,7 @@
             priceText.visible = false;
         },
         
-        cashRegisterOverlayOn: function (price) {
+        cashRegisterOverlayOn: function (string) {
             if (priceText == null) {
                 
                 registerPanel = new OverlayPanel({
@@ -83,7 +85,7 @@
                 });
                 
                 priceText = new Text3DOverlay({
-                        text: price + "$",
+                        text: string,
                         isFacingAvatar: false,
                         alpha: 1.0,
                         ignoreRayIntersection: true,
@@ -102,27 +104,41 @@
                 
                 registerPanel.addChild(priceText);
             } else {
-                priceText.text = price + "$";
+                priceText.text = string;
                 priceText.visible = true;
             }
         },
         
-        collisionWithEntity: function(myID, otherID, collisionInfo) {
-            print("RegisterCollision!");
+        collisionWithEntity: function (myID, otherID, collisionInfo) {
             var entityName = Entities.getEntityProperties(otherID).name;
+            print("RegisterCollision with: " + entityName);
             var entityOwnerID = getEntityCustomData('ownerKey', otherID, null).ownerID;
             if (entityName == CREDIT_CARD_NAME && entityOwnerID == payingAvatarID) {
-                //The register collided with the right credit card
+                //The register collided with the right credit card - CHECKOUT
                 print("CHECKOUT: total price is " + totalPrice + "$");
                 Entities.deleteEntity(otherID);
-                cartID.resetCart();     //FIX ME - Has to be an entity method
-                Entities.deleteEntity(cartID);
+                Entities.callEntityMethod(cartID, 'resetCart', null);
+                _this.cashRegisterOverlayOn("THANK YOU!");
+                _this.clean();
             }
+        },
+        
+        //clean all the variable related to the cart
+        clean: function () {
+            if (actualCartRegisterChannel != null) {
+                Messages.unsubscribe(actualCartRegisterChannel);
+            }
+            actualCartRegisterChannel = null;
+            cartID = null;
+            payingAvatarID = null;
+            totalPrice = 0;
         },
 
         unload: function (entityID) {
-            Messages.unsubscribe(actualCartRegisterChannel);
-            Messages.messageReceived.disconnect(receivingMessage);
+            _this.clean();
+            Messages.messageReceived.disconnect(receivingMessage);      //this doesn't go in the clean() because it not depends from the cart but from the Avatar
+            registerPanel.destroy();
+            registerPanel = priceText = null;
         }
     }
 
