@@ -56,7 +56,7 @@
                 ignoreForCollisions: false,
                 angularVelocity: CARD_ANGULAR_VELOCITY,
                 angularDamping: 0,
-                script: Script.resolvePath(SCRIPT_URL),      
+                script: Script.resolvePath(SCRIPT_URL),
                 userData: JSON.stringify({
                     ownerKey: {
                         ownerID: MyAvatar.sessionUUID

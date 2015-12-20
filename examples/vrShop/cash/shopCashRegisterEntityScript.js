@@ -13,6 +13,7 @@
     var registerPanel;
     var priceText;
     var payingAvatarID = null;
+    var totalPrice = 0;
 
     function CashRegister() {
         _this = this;
@@ -26,6 +27,7 @@
             print("The price is: " + messageObj.totalPrice);
             //create or update the Overlay
             _this.cashRegisterOverlayOn(messageObj.totalPrice);
+            totalPrice = messageObj.totalPrice;
         }
     };
 
@@ -106,14 +108,14 @@
         },
         
         collisionWithEntity: function(myID, otherID, collisionInfo) {
+            print("RegisterCollision!");
             var entityName = Entities.getEntityProperties(otherID).name;
             var entityOwnerID = getEntityCustomData('ownerKey', otherID, null).ownerID;
-            
             if (entityName == CREDIT_CARD_NAME && entityOwnerID == payingAvatarID) {
                 //The register collided with the right credit card
                 print("CHECKOUT: total price is " + totalPrice + "$");
                 Entities.deleteEntity(otherID);
-                cartID.resetCart();
+                cartID.resetCart();     //FIX ME - Has to be an entity method
                 Entities.deleteEntity(cartID);
             }
         },
