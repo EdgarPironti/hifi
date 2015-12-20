@@ -1,6 +1,7 @@
 // shopCreditCardEntityscript.js
 //
 
+//var _this;
 var entityProperties = null;
 // var released = false;
 // var myCard = false;
