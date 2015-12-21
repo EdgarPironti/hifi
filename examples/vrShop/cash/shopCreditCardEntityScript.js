@@ -1,12 +1,11 @@
 // shopCreditCardEntityscript.js
 //
 
-//var _this;
+var _this;
 var entityProperties = null;
-// var released = false;
-// var myCard = false;
+var myCard = false;
 
-// var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
+var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
 
 (function() {
     
@@ -16,43 +15,33 @@ var entityProperties = null;
          _this = this;
     };
     
-    // function update(deltaTime) {
-        // if (myCard && released) {
-            // Entities.editEntity(_this.entityID, { velocity: {x: 0, y: 0, z: 0} });
-            // Entities.editEntity(_this.entityID, { angularVelocity: CARD_ANGULAR_VELOCITY });
-            // Entities.editEntity(_this.entityID, { angularDamping: 0 });
-            // Entities.editEntity(_this.entityID, { position: entityProperties.position });
-            // released = false;
-            // print("Edited!");
-        // }
-    // };
+    function update(deltaTime) {
+        if (myCard) {
+            Entities.editEntity(_this.entityID, { velocity: {x: 0, y: 0, z: 0},
+                                                  angularVelocity: CARD_ANGULAR_VELOCITY,
+                                                  angularDamping: 0,
+                                                  position: entityProperties.position
+                                                });
+            print("Edited!");
+        }
+    };
     
     DetectGrabbed.prototype = {
         
         preload: function(entityID) {
             this.entityID = entityID;
-            // var ownerObj = getEntityCustomData('ownerKey', this.entityID, null);
-            // if (ownerObj.ownerID === MyAvatar.sessionUUID) {
-                // myCard = true;
-                // Script.update.connect(update);
-            // }
+            var ownerObj = getEntityCustomData('ownerKey', this.entityID, null);
+            if (ownerObj.ownerID === MyAvatar.sessionUUID) {
+                myCard = true;
+                entityProperties = Entities.getEntityProperties(this.entityID);
+                Script.update.connect(update);
+            }
         },
-        
-        // startNearGrab: function () {
-            // entityProperties = Entities.getEntityProperties(this.entityID);
-            // Vec3.print(entityProperties.position);
-        // },
-
-        releaseGrab: function () {
-            //released = true;
-            Entities.deleteEntity(this.entityID);
-        },
-
         
         unload: function (entityID) {
-            // if (myCard) {
-                // Script.update.disconnect(update);
-            // }
+            if (myCard) {
+                Script.update.disconnect(update);
+            }
             Entities.deleteEntity(this.entityID);
         }
     };
