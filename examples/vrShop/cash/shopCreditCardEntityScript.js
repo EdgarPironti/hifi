@@ -22,7 +22,6 @@ var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
                                                   angularDamping: 0,
                                                   position: entityProperties.position
                                                 });
-            print("Edited!");
         }
     };
     
