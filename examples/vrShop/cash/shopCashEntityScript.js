@@ -5,8 +5,11 @@
     
     var AGENT_PLAYBACK_CHANNEL = "playbackChannel";
     var PLAY_MESSAGE = "Play";
-    var REGISTER_NAME = "Cash Register"; // FIXME: Change this with the actual name
-    var CARD_ANGULAR_VELOCITY = {x:0, y:2, z:0};
+    var REGISTER_NAME = "CashRegister";
+    var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
+    var CARD_POSITION_OFFSET = {x: 0, y: 0.2, z: 0};
+    var CARD_INITIAL_ORIENTATION = {x: 0, y: 0, z: 40};
+    var CARD_DIMENSIONS = {x: 0.02, y: 0.09, z: 0.15};
     var SCRIPT_URL = Script.resolvePath("shopCreditCardEntityScript.js");
     
     var cashRegisterID = null;
@@ -45,13 +48,15 @@
              
             // create card on register position
             
-            var cardPosition = Vec3.sum(Entities.getEntityProperties(cashRegisterID).position, {x : 0, y : 0.2, z : 0});
+            var cardPosition = Vec3.sum(Entities.getEntityProperties(cashRegisterID).position, CARD_POSITION_OFFSET);
+            var cardOrientationQuat = Quat.fromVec3Degrees(CARD_INITIAL_ORIENTATION);
             
             cardID = Entities.addEntity({
-                type: "Box",
+                type: "Model",
                 name: "CreditCard",
                 position: cardPosition,
-                dimensions: {x : 0.30, y : 0.12, z : 0.12},
+                rotation: cardOrientationQuat,
+                dimensions: CARD_DIMENSIONS,
                 collisionsWillMove: false,
                 ignoreForCollisions: false,
                 angularVelocity: CARD_ANGULAR_VELOCITY,
@@ -61,9 +66,9 @@
                     ownerKey: {
                         ownerID: MyAvatar.sessionUUID
                     }
-                })
-                // modelURL: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/shoe4.fbx",
-                // shapeType: "box"
+                }),
+                modelURL: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/CreditCard.fbx",
+                shapeType: "box"
                 // We have to put the ownerID in the card, and check that when grabbing the card. Otherwise it cannot be grabbed
             });
             
