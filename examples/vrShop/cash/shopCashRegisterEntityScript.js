@@ -26,7 +26,8 @@
             print("Register received message");
             print("The price is: " + messageObj.totalPrice);
             //create or update the Overlay
-            _this.cashRegisterOverlayOn("" + messageObj.totalPrice + " $");
+            var price = messageObj.totalPrice.toFixed(2);
+            _this.cashRegisterOverlayOn("" + price + " $");
             totalPrice = messageObj.totalPrice;
         }
     };
@@ -74,29 +75,35 @@
         },
         
         cashRegisterOverlayOn: function (string) {
+            var stringOffset = string.length * 0.018;
+            print("string Offset: " + stringOffset);
             if (priceText == null) {
                 
                 registerPanel = new OverlayPanel({
                     anchorPositionBinding: { entity: _this.entityID },
                     //anchorRotationBinding: { entity: entityBindID },
-                    offsetPosition: { x: 0, y: 0.2, z: 0.1 },
-                    isFacingAvatar: true,
+                    offsetPosition: { x: 0, y: 0.18, z: -0.2 },
+                    isFacingAvatar: false,
                     
                 });
                 
                 priceText = new Text3DOverlay({
                         text: string,
                         isFacingAvatar: false,
-                        alpha: 1.0,
                         ignoreRayIntersection: true,
                         dimensions: { x: 0, y: 0 },
+                        offsetPosition: {
+                            x: -stringOffset,
+                            y: 0,
+                            z: 0
+                        },
                         backgroundColor: { red: 255, green: 255, blue: 255 },
-                        color: { red: 0, green: 0, blue: 0 },
+                        color: { red: 0, green: 255, blue: 0 },
                         topMargin: 0.00625,
                         leftMargin: 0.00625,
                         bottomMargin: 0.1,
                         rightMargin: 0.00625,
-                        lineHeight: 0.02,
+                        lineHeight: 0.06,
                         alpha: 1,
                         backgroundAlpha: 0.3,
                         visible: true
@@ -106,6 +113,11 @@
             } else {
                 priceText.text = string;
                 priceText.visible = true;
+                priceText.offsetPosition = {
+                            x: -stringOffset,
+                            y: 0,
+                            z: 0
+                        };
             }
         },
         

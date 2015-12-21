@@ -7,7 +7,7 @@
     var PLAY_MESSAGE = "Play";
     var REGISTER_NAME = "CashRegister";
     var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
-    var CARD_POSITION_OFFSET = {x: 0, y: 0.2, z: 0};
+    var CARD_POSITION_OFFSET = {x: 0, y: 0.5, z: 0};
     var CARD_INITIAL_ORIENTATION = {x: 0, y: 0, z: 40};
     var CARD_DIMENSIONS = {x: 0.02, y: 0.09, z: 0.15};
     var SCRIPT_URL = Script.resolvePath("shopCreditCardEntityScript.js");
@@ -38,8 +38,7 @@
             // Vec3.print("AvPos: ", MyAvatar.position);
             
             var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(entityID).position, (Entities.getEntityProperties(entityID).dimensions.x)/2); 
-            entitiesInZone.forEach( function(e) { 
-                print("Found entity " + Entities.getEntityProperties(e).name);
+            entitiesInZone.forEach( function(e) {
                 if (Entities.getEntityProperties(e).name == REGISTER_NAME) {
                     cashRegisterID = Entities.getEntityProperties(e).id;
                     print(cashRegisterID);
