@@ -81,8 +81,8 @@
                 
                 registerPanel = new OverlayPanel({
                     anchorPositionBinding: { entity: _this.entityID },
-                    //anchorRotationBinding: { entity: entityBindID },
-                    offsetPosition: { x: 0, y: 0.18, z: -0.2 },
+                    //anchorRotationBinding: { entity: _this.entityID },
+                    offsetPosition: { x: 0, y: 0.21, z: -0.14 },
                     isFacingAvatar: false,
                     
                 });
