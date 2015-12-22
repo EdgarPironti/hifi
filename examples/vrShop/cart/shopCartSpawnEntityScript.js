@@ -50,10 +50,10 @@
         enterEntity: function (entityID) {
             print("entering in the spawn cart area");
             
-            //if (!isScriptRunning(SHOP_GRAB_SCRIPT_URL)) {
+            if (!isScriptRunning(SHOP_GRAB_SCRIPT_URL)) {
                 print("Loading grab script");
                 Script.load(SHOP_GRAB_SCRIPT_URL);
-           // }
+           }
             
             var entityProperties = Entities.getEntityProperties(cartMasterID);
             myCartID = Entities.addEntity({
