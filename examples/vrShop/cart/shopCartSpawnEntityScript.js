@@ -81,7 +81,7 @@
             print("leaving the spawn cart area");
             Entities.callEntityMethod(myCartID, "resetCart");
             Entities.deleteEntity (myCartID);
-            Messages.sendMessage(SHOP_GRAB_CHANNEL, null);      //signal to shopItemGrab that it has to end
+            Messages.sendMessage(SHOP_GRAB_CHANNEL, null);      //signal to shopItemGrab that it has to kill itself
         },
 
         unload: function (entityID) {

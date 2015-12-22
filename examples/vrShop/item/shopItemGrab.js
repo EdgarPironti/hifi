@@ -912,6 +912,8 @@ stopScriptMessage = function(channel, message, sender) {
     if (channel == SHOP_GRAB_CHANNEL && sender === MyAvatar.sessionUUID) {
         //stop this script and enable the handControllerGrab
         Messages.sendMessage('Hifi-Hand-Disabler', "none");
+        Messages.unsubscribe(SHOP_GRAB_CHANNEL);
+        Messages.messageReceived.disconnect(stopScriptMessage);
         Script.stop();
     }
 }
