@@ -56,11 +56,13 @@
     var priceNumber = -1;
     var availabilityNumber = -1;
     var avatarEntity = null;
+    var tempTryEntity;
     
     var newPosition = null;
     var newRotation = null;
     
     var mainPanel = null;
+    var mirrorPanel = null;
     var buttons = [];
     var modelURLsArray = [];
     var previewURLsArray = [];
@@ -191,6 +193,59 @@
                             Entities.editEntity(avatarEntity, { visible: true });
                         }
                     }
+                    
+                    if (nextButton == triggeredButton) {
+                        print("Next pressed!");
+                        
+                        // Code for the overlay text for the mirror.
+                        
+                        // mirrorPanel = new OverlayPanel({
+                            // anchorPositionBinding: { avatar: MyAvatar.sessionUUID },
+                            // //anchorRotationBinding: { entity: _this.entityID },
+                            
+                            // // isFacingAvatar: false
+                        // });
+                        // var mirrorText = new Text3DOverlay({
+                            // text: "Press any key to go back in inspection.",
+                            // isFacingAvatar: true,
+                            // alpha: 1.0,
+                            // ignoreRayIntersection: true,
+                            // offsetPosition: {
+                                // x: 0,
+                                // y: 0,
+                                // z: 0
+                            // },
+                            // dimensions: { x: 0, y: 0 },
+                            // backgroundColor: { red: 255, green: 255, blue: 255 },
+                            // color: { red: 0, green: 0, blue: 0 },
+                            // topMargin: 0.00625,
+                            // leftMargin: 0.00625,
+                            // bottomMargin: 0.1,
+                            // rightMargin: 0.00625,
+                            // lineHeight: 0.02,
+                            // alpha: 1,
+                            // backgroundAlpha: 0.3
+                        // });
+                        
+                        // mirrorPanel.addChild(mirrorText);
+                        
+                        Camera.setModeString("mirror");
+                        var entityProperties = Entities.getEntityProperties(inspectedEntityID); 
+                        tempTryEntity = Entities.addEntity({
+                            type: entityProperties.type,
+                            name: entityProperties.name,
+                            localPosition:  {x: 0, y: 0.1, z: 0},
+                            dimensions: entityProperties.dimensions,
+                            rotation: entityProperties.rotation,
+                            collisionsWillMove: false,
+                            ignoreForCollisions: true,
+                            modelURL: entityProperties.modelURL,
+                            shapeType: entityProperties.shapeType,
+                            originalTextures: entityProperties.originalTextures,
+                            parentID: MyAvatar.sessionUUID,
+                            parentJointIndex: MyAvatar.getJointIndex("Head")
+                        });
+                    }         
                 }
             } else if (!bumperPressed && this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = false;
@@ -206,6 +261,12 @@
     };
     
     function update(deltaTime) {
+        
+        if(Controller.getValue(Controller.Standard.RightPrimaryThumb || Controller.Standard.LeftPrimaryThumb)) {
+            Camera.setModeString("first person");
+            mirrorPanel.destroy();
+            Entities.deleteEntity(tempTryEntity);
+        }
         
         //the if condition should depend from other stuff
         if (inspecting) {

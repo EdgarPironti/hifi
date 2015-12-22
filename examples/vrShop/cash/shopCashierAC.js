@@ -1,5 +1,5 @@
 // Set the following variables to the values needed
-var clip_url = "atp:4147173bdb79d0f48d8fdec2ad3a27926177e8f67e8c1078a841e389145a52d3.hfr"; // This url is working in VRshop
+var clip_url = "atp:6865d9c89472d58b18929aff0ac779026bc129190f7536f71d3835f7e2629c93.hfr"; // This url is working in VRshop
 
 
 var PLAYBACK_CHANNEL = "playbackChannel";
