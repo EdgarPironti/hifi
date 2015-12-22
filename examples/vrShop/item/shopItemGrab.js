@@ -14,6 +14,8 @@
 
 Script.include("../../libraries/utils.js");
 
+var SHOP_GRAB_CHANNEL = "Hifi-vrShop-Grab";
+Messages.sendMessage('Hifi-Hand-Disabler', "both");     //disable both the hands from handControlledGrab
 
 //
 // add lines where the hand ray picking is happening
@@ -888,23 +890,33 @@ function update() {
     }
 }
 
-Messages.subscribe('Hifi-Hand-Disabler');
+// Messages.subscribe('Hifi-Hand-Disabler');
 
-handleHandDisablerMessages = function(channel, message, sender) {
+// handleHandDisablerMessages = function(channel, message, sender) {
 
-    if (sender === MyAvatar.sessionUUID) {
-        handToDisable = message;
-        if (message === 'left') {
-            handToDisable = LEFT_HAND;
-        }
-        if (message === 'right') {
-            handToDisable = RIGHT_HAND;
-        }
+    // if (sender === MyAvatar.sessionUUID) {
+        // handToDisable = message;
+        // if (message === 'left') {
+            // handToDisable = LEFT_HAND;
+        // }
+        // if (message === 'right') {
+            // handToDisable = RIGHT_HAND;
+        // }
+    // }
+
+// }
+
+Messages.subscribe(SHOP_GRAB_CHANNEL);
+
+stopScriptMessage = function(channel, message, sender) {
+    if (channel == SHOP_GRAB_CHANNEL && sender === MyAvatar.sessionUUID) {
+        //stop this script and enable the handControllerGrab
+        Messages.sendMessage('Hifi-Hand-Disabler', "none");
+        Script.stop();
     }
-
 }
 
-Messages.messageReceived.connect(handleHandDisablerMessages);
+Messages.messageReceived.connect(stopScriptMessage);
 
 function cleanup() {
     rightController.cleanup();

@@ -4,7 +4,7 @@
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     
     var SHOPPING_CART_NAME = "Shopping cart";
-    var CART_REGISTER_CHANNEL = "Hifi-vrShop::";      //the ID of the cart which has to pay will be appended to this channel name
+    var CART_REGISTER_CHANNEL = "Hifi-vrShop-Register::";      //the ID of the cart which has to pay will be appended to this channel name
     var CREDIT_CARD_NAME = "CreditCard";
     
     var _this;

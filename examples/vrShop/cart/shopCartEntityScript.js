@@ -9,7 +9,7 @@
     // HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
     var COMFORT_ARM_LENGTH = 0.5;
-    var CART_REGISTER_CHANNEL = "Hifi-vrShop::";      //the ID of the cart will be appended to this channel name
+    var CART_REGISTER_CHANNEL = "Hifi-vrShop-Register::";      //the ID of the cart will be appended to this channel name
 
     var _this;
     var cartIsMine = false;

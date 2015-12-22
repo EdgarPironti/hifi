@@ -16,7 +16,9 @@
 
 (function () {
     var CART_MASTER_NAME = "ShopCartZero";
-    var SCRIPT_URL = Script.resolvePath("shopCartEntityScript.js");
+    var CART_SCRIPT_URL = Script.resolvePath("shopCartEntityScript.js");
+    var SHOP_GRAB_SCRIPT_URL = Script.resolvePath("../item/shopItemGrab.js");
+    var SHOP_GRAB_CHANNEL = "Hifi-vrShop-Grab";
     var _this;
     var isOwningACart = false;
     var cartMasterID = null;
@@ -39,46 +41,47 @@
                 var properties = Entities.getEntityProperties(id);
                 if (properties.name == CART_MASTER_NAME) {
                     cartMasterID = id;
-                    print("Cart master found");
+                    print("Master Cart found");
+                    return;
                 }
             });
         },
 
         enterEntity: function (entityID) {
             print("entering in the spawn cart area");
-            if (isOwningACart == false) {
-                var entityProperties = Entities.getEntityProperties(cartMasterID);
-                
-                myCartID = Entities.addEntity({
-                    type: entityProperties.type,
-                    name: "Shopping cart",
-                    ignoreForCollisions: false,
-                    collisionsWillMove: false,
-                    dimensions: entityProperties.dimensions,
-                    modelURL: entityProperties.modelURL,
-                    shapeType: entityProperties.shapeType,
-                    originalTextures: entityProperties.originalTextures,
-                    script: SCRIPT_URL,
-                    userData: JSON.stringify({
-                        ownerKey: {
-                            ownerID: MyAvatar.sessionUUID
-                        },
-                        grabbableKey: {
-                            grabbable: false
-                        }
-                    })
-                });
-                isOwningACart = true;
-            } else {
-                Entities.callEntityMethod(myCartID, "resetCart");
-                Entities.deleteEntity (myCartID);
-                isOwningACart = false;
-            }
             
+            //if (!isScriptRunning(SHOP_GRAB_SCRIPT_URL)) {
+                print("Loading grab script");
+                Script.load(SHOP_GRAB_SCRIPT_URL);
+           // }
+            
+            var entityProperties = Entities.getEntityProperties(cartMasterID);
+            myCartID = Entities.addEntity({
+                type: entityProperties.type,
+                name: "Shopping cart",
+                ignoreForCollisions: false,
+                collisionsWillMove: false,
+                dimensions: entityProperties.dimensions,
+                modelURL: entityProperties.modelURL,
+                shapeType: entityProperties.shapeType,
+                originalTextures: entityProperties.originalTextures,
+                script: CART_SCRIPT_URL,
+                userData: JSON.stringify({
+                    ownerKey: {
+                        ownerID: MyAvatar.sessionUUID
+                    },
+                    grabbableKey: {
+                        grabbable: false
+                    }
+                })
+            });
         },
 
         leaveEntity: function (entityID) {
             print("leaving the spawn cart area");
+            Entities.callEntityMethod(myCartID, "resetCart");
+            Entities.deleteEntity (myCartID);
+            Messages.sendMessage(SHOP_GRAB_CHANNEL, null);      //signal to shopItemGrab that it has to end
         },
 
         unload: function (entityID) {
