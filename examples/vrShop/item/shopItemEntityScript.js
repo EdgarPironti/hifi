@@ -131,9 +131,12 @@
                 isFacingAvatar: true,
                 
             });
+            var entityProperties = Entities.getEntityProperties(entityBindID);
+            var userDataObj = JSON.parse(entityProperties.userData);
+            var availabilityNumber = userDataObj.infoKey.availability;
             
             textCart = new Text3DOverlay({
-                    text: "Store the item!",
+                    text: availabilityNumber > 0 ? "Store the item!" : "Not available!",
                     isFacingAvatar: false,
                     alpha: 1.0,
                     ignoreRayIntersection: true,
@@ -152,7 +155,6 @@
             
             cartPanel.addChild(textCart);
             
-            //print ("Overlay created");
         },
         
         
@@ -185,9 +187,9 @@
         
         startNearGrab: function () {
             
-            print("I was just grabbed... entity:" + this.entityID);
-            Entities.editEntity(this.entityID, { ignoreForCollisions: false });
-            Entities.editEntity(this.entityID, { dimensions: originalDimensions });
+            print("I was just grabbed... entity:" + _this.entityID);
+            Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
+            Entities.editEntity(_this.entityID, { dimensions: originalDimensions });
             
             // Everytime we grab, we create the inspectEntity and the inspectAreaOverlay in front of the avatar
             
@@ -207,7 +209,7 @@
                             ownerID: MyAvatar.sessionUUID
                         },
                         itemKey: {
-                            itemID: this.entityID
+                            itemID: _this.entityID
                         },
                         grabbableKey: {
                             grabbable: false
@@ -217,14 +219,14 @@
             }
             
             _this.createInspectOverlay(inspectingEntity);
-            _this.createCartOverlay(this.entityID);
+            _this.createCartOverlay(_this.entityID);
             print("Got after the creation!");
             
             if (inspecting === true) {
                 inspecting = false;
                 //deletentityforinspecting
                 Controller.disableMapping(MAPPING_NAME);
-                setEntityCustomData('statusKey', this.entityID, {
+                setEntityCustomData('statusKey', _this.entityID, {
                     status: "inHand"
                 });
             } else if (onShelf === true) {
@@ -232,7 +234,7 @@
                 // --- Create a copy of this entity if it is the first grab ---
                 
                 print("creating a copy of the grabbed dentity");
-                var entityProperties = Entities.getEntityProperties(this.entityID);
+                var entityProperties = Entities.getEntityProperties(_this.entityID);
                 
                 var entityOnShelf = Entities.addEntity({
                     type: entityProperties.type,
@@ -259,12 +261,12 @@
                 
                 print("End of clone creation.");
                 
-                setEntityCustomData('statusKey', this.entityID, {
+                setEntityCustomData('statusKey', _this.entityID, {
                     status: "inHand"
                 });
                 
                 onShelf = false;
-                setEntityCustomData('ownerKey', this.entityID, {
+                setEntityCustomData('ownerKey', _this.entityID, {
                     ownerID: MyAvatar.sessionUUID
                 });
                 originalDimensions = entityProperties.dimensions;
@@ -274,11 +276,11 @@
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
                 inCart = false;
-                setEntityCustomData('statusKey', this.entityID, {
+                setEntityCustomData('statusKey', _this.entityID, {
                     status: "inHand"
                 });
                 var dataJSON = {
-                    id: this.entityID
+                    id: _this.entityID
                 };
                 var dataArray = [JSON.stringify(dataJSON)];
                 print("Going to refresh!");
@@ -292,25 +294,29 @@
 
         releaseGrab: function () {
             
-            print("I was released... entity:" + this.entityID);
-            Entities.editEntity(this.entityID, { ignoreForCollisions: true });
+            print("I was released... entity:" + _this.entityID);
+            Entities.editEntity(_this.entityID, { ignoreForCollisions: true });
             print("zoneID is " + zoneID);
             
             // Destroy overlay
             inspectPanel.destroy();
             cartPanel.destroy();
             
-            if (zoneID !== null) {
+            var entityProperties = Entities.getEntityProperties(_this.entityID);
+            var userDataObj = JSON.parse(entityProperties.userData);
+            var availabilityNumber = userDataObj.infoKey.availability;
+            
+            if (zoneID !== null && availabilityNumber > 0) {
                 
-                print("Got here. Entity ID is: " + this.entityID);
+                print("Got here. Entity ID is: " + _this.entityID);
                 //Entities.callEntityMethod(zoneID, 'doSomething', this.entityID);
                 var dataJSON = {
-                    id: this.entityID
+                    id: _this.entityID
                 };
                 var dataArray = [JSON.stringify(dataJSON)];
                 Entities.callEntityMethod(zoneID, 'doSomething', dataArray);
                 
-                var statusObj = getEntityCustomData('statusKey', this.entityID, null);
+                var statusObj = getEntityCustomData('statusKey', _this.entityID, null);
                 
                 //print("ZONE ID NOT NULL AND STATUS IS: " + statusObj.status);
                 
@@ -342,7 +348,7 @@
                     inspectingEntity = null;
                 }
                 
-            } else { // ZoneID is null, released somewhere that is not a zone
+            } else { // ZoneID is null, released somewhere that is not a zone. Or alailability is zero
                 Entities.deleteEntity(inspectingEntity);
                 inspectingEntity = null;
                 Entities.deleteEntity(this.entityID);

@@ -890,22 +890,6 @@ function update() {
     }
 }
 
-// Messages.subscribe('Hifi-Hand-Disabler');
-
-// handleHandDisablerMessages = function(channel, message, sender) {
-
-    // if (sender === MyAvatar.sessionUUID) {
-        // handToDisable = message;
-        // if (message === 'left') {
-            // handToDisable = LEFT_HAND;
-        // }
-        // if (message === 'right') {
-            // handToDisable = RIGHT_HAND;
-        // }
-    // }
-
-// }
-
 Messages.subscribe(SHOP_GRAB_CHANNEL);
 
 stopScriptMessage = function(channel, message, sender) {

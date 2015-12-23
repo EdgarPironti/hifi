@@ -9,8 +9,7 @@
     // HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
     var COMFORT_ARM_LENGTH = 0.5;
-    var CART_REGISTER_CHANNEL = "Hifi-vrShop-Register::";      //the ID of the cart will be appended to this channel name
-
+    var CART_REGISTER_CHANNEL = "Hifi-vrShop-Register";
     var _this;
     var cartIsMine = false;
     var originalY = 0;
@@ -19,7 +18,8 @@
     var scaleFactor = 0.7; //The scale factor will dipend on the number of items in the cart. We would resize even the items already present.                
     var cartTargetPosition;
     var cartTargetRotation;
-    var actualCartRegisterChannel = null;
+    var singlePrices = [];
+    var singlePriceTagsAreShowing = false;
     
     var zoneID = null;
     var PENETRATION_THRESHOLD = 0.2;
@@ -40,12 +40,16 @@
     };
     
     function receivingMessage(channel, message, senderID) {     //The senderID is the ID of the Avatar who runs the interface, not the ID on the entity which calls sendMessage()
-        var messageObj = JSON.parse(message);
-        if (messageObj.senderEntity != _this.entityID && channel == actualCartRegisterChannel) {
-            print("Cart received message");
-            //This means that the register wants the total price
-            _this.computeAndSendTotalPrice();
+        if (senderID === MyAvatar.sessionUUID && channel == CART_REGISTER_CHANNEL) {
+            var messageObj = JSON.parse(message);
+            //if (messageObj.senderEntity != _this.entityID && channel == actualCartRegisterChannel) {
+            if (messageObj.senderEntity != _this.entityID) {
+                print("Cart received message");
+                //This means that the register wants the total price
+                _this.computeAndSendTotalPrice();
+            }
         }
+        
     };
 
     ShopCart.prototype = {
@@ -63,8 +67,7 @@
                 cartIsMine = true;
                 cartTargetPosition = Entities.getEntityProperties(_this.entityID).position; //useful if the entity script is assigned manually
                 Script.update.connect(update);
-                actualCartRegisterChannel = CART_REGISTER_CHANNEL + this.entityID;
-                Messages.subscribe(actualCartRegisterChannel);      //subsribing to a channel to communicate with the cashRegister
+                Messages.subscribe(CART_REGISTER_CHANNEL);
                 Messages.messageReceived.connect(receivingMessage);
                 print("PRELOAD USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
             }
@@ -104,6 +107,7 @@
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
                 Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
             }
+
         },
         
         resetCart: function (entityID) {
@@ -112,6 +116,9 @@
             
             print("itemsQuantity before: " + itemsID.length);
             if (itemsID.length != 0) {
+                if (singlePriceTagsAreShowing) {
+                    _this.singlePriceOff();
+                }
                 // Delete all the items (entities)
                 for (var i=0; i < itemsID.length; i++) {
                     Entities.deleteEntity(itemsID[i]);
@@ -137,18 +144,14 @@
                 // Clean the relativePostion array
                 relativeItemsPosition = [];
                 print("relative position array " + relativeItemsPosition.length);
+                
+                _this.computeAndSendTotalPrice();
             }
         },
         
+        //delete the item pointed by dataArray (data.id) from the cart
         refreshCartContent: function (entityID, dataArray) {
             var data = JSON.parse(dataArray[0]);
-            var itemOwnerObj = getEntityCustomData('ownerKey', data.id, null);
-            
-            if (((itemOwnerObj == null) ? itemOwnerObj : itemOwnerObj.ownerID) === MyAvatar.sessionUUID) {
-                print("The owner of the item is you");
-            } else {
-                print("NOT YOUR ITEM, NOT YOUR CART!");
-            }
             
             print("item ID: " + data.id);
             
@@ -156,6 +159,11 @@
                 if(itemsID[i] == data.id) {
                     itemsID.splice(i, 1);
                     relativeItemsPosition.splice(i,1);
+                    //if the price tags are showing we have to remove also the proper tag
+                    if (singlePriceTagsAreShowing) {
+                        singlePrices[i].destroy();
+                        singlePrices.splice(i, 1);
+                    }
                 }
             }
             
@@ -163,6 +171,54 @@
             itemsID.forEach( function(p) { print(p) });
             
             _this.computeAndSendTotalPrice();
+        },
+        
+        singlePriceOn: function () {
+            //create an array of text3D which follows the structure of the itemsID array. Each text3D is like the 'Store the item!' one
+            var i = 0;
+            itemsID.forEach( function(itemID) {
+                print("creating single price overlay");
+                singlePrices[i] = new OverlayPanel({
+                    anchorPositionBinding: { entity: itemID },
+                    //anchorRotationBinding: { entity: entityBindID },
+                    offsetPosition: { x: 0, y: 0.15, z: 0 },
+                    isFacingAvatar: true,
+                    
+                });
+                
+                var textPrice = new Text3DOverlay({
+                    text: "" + getEntityCustomData('infoKey', itemID, null).price + " $",
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: true,
+                    dimensions: { x: 0, y: 0 },
+                    backgroundColor: { red: 255, green: 255, blue: 255 },
+                    color: { red: 0, green: 255, blue: 0 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.02,
+                    alpha: 1,
+                    backgroundAlpha: 0.3,
+                    visible: true
+                });
+                
+                singlePrices[i].addChild(textPrice);
+                i++;
+            });
+            
+            singlePriceTagsAreShowing = true;
+        },
+        
+        singlePriceOff: function () {
+            //destroy or make invisible the text3D, or both
+            singlePrices.forEach(function(panel) {
+                print("destroying single price");
+                panel.destroy();
+            });
+            singlePrices = [];
+            singlePriceTagsAreShowing = false;
         },
         
         computeAndSendTotalPrice: function () {
@@ -176,7 +232,7 @@
             
             
             var messageObj = {senderEntity: _this.entityID, totalPrice: totalPrice};
-            Messages.sendMessage(actualCartRegisterChannel, JSON.stringify(messageObj));    //sending a json object with the ID of this entity and the price
+            Messages.sendMessage(CART_REGISTER_CHANNEL, JSON.stringify(messageObj));
         },
         
         doSomething: function (entityID, dataArray) {
@@ -225,6 +281,37 @@
                 print("Set status!");
                 
                 _this.computeAndSendTotalPrice();
+                
+                //if the single price tags are showing we have to put a tag also in the new item
+                if (singlePriceTagsAreShowing) {
+                    singlePrices[itemsQuantity-1] = new OverlayPanel({
+                        anchorPositionBinding: { entity: data.id },
+                        //anchorRotationBinding: { entity: entityBindID },
+                        offsetPosition: { x: 0, y: 0.15, z: 0 },
+                        isFacingAvatar: true,
+                    
+                    });
+                
+                    var textPrice = new Text3DOverlay({
+                        text: "" + getEntityCustomData('infoKey', data.id, null).price + " $",
+                        isFacingAvatar: false,
+                        alpha: 1.0,
+                        ignoreRayIntersection: true,
+                        dimensions: { x: 0, y: 0 },
+                        backgroundColor: { red: 255, green: 255, blue: 255 },
+                        color: { red: 0, green: 255, blue: 0 },
+                        topMargin: 0.00625,
+                        leftMargin: 0.00625,
+                        bottomMargin: 0.1,
+                        rightMargin: 0.00625,
+                        lineHeight: 0.02,
+                        alpha: 1,
+                        backgroundAlpha: 0.3,
+                        visible: true
+                    });
+                
+                    singlePrices[itemsQuantity-1].addChild(textPrice);
+                }
             } else {
                 print("Not your cart!");
                 Entities.deleteEntity(data.id);
@@ -258,7 +345,7 @@
                 Script.update.disconnect(update);
                 _this.resetCart();  //useful if the script is reloaded manually
                 //Entities.deleteEntity(_this.entityID);        //comment for manual reload
-                Messages.unsubscribe(actualCartRegisterChannel);
+                Messages.unsubscribe(CART_REGISTER_CHANNEL);
                 Messages.messageReceived.disconnect(receivingMessage);
             }
         }

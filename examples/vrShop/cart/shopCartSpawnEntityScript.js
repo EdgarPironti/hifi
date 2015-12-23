@@ -29,6 +29,17 @@
         _this = this;
         return;
     };
+    
+    function isScriptRunning(script) {
+        script = script.toLowerCase().trim();
+        var runningScripts = ScriptDiscoveryService.getRunning();
+        for (i in runningScripts) {
+            if (runningScripts[i].url.toLowerCase().trim() == script) {
+                return true;
+            }
+        }
+        return false;
+    };
 
 
 
@@ -53,7 +64,7 @@
             if (!isScriptRunning(SHOP_GRAB_SCRIPT_URL)) {
                 print("Loading grab script");
                 Script.load(SHOP_GRAB_SCRIPT_URL);
-           }
+            }
             
             var entityProperties = Entities.getEntityProperties(cartMasterID);
             myCartID = Entities.addEntity({
@@ -61,6 +72,7 @@
                 name: "Shopping cart",
                 ignoreForCollisions: false,
                 collisionsWillMove: false,
+                position: entityProperties.position,
                 dimensions: entityProperties.dimensions,
                 modelURL: entityProperties.modelURL,
                 shapeType: entityProperties.shapeType,
