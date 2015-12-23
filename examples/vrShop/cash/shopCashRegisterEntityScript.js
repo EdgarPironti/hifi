@@ -10,8 +10,8 @@
     
     var _this;
     var cartID = null;
-    var registerPanel;
-    var priceText;
+    var registerPanel = null;
+    var priceText = null;
     var payingAvatarID = null;
     var totalPrice = 0;
 
@@ -62,6 +62,7 @@
             if (cartID != null) {
                 print("Cart found! Its ID is: " + cartID);
                 payingAvatarID = MyAvatar.sessionUUID;
+                print("register sent message");
                 Messages.sendMessage(CART_REGISTER_CHANNEL, JSON.stringify({senderEntity: _this.entityID}));    //with this message the cart know that it has to compute and send back the total price of the items
                 Entities.callEntityMethod(cartID, 'singlePriceOn', null);
             } else {
@@ -83,6 +84,7 @@
         cashRegisterOverlayOn: function (string) {
             var stringOffset = string.length * 0.018;
             if (priceText == null) {
+                print("register create string: " + string);
                 
                 registerPanel = new OverlayPanel({
                     anchorPositionBinding: { entity: _this.entityID },
@@ -116,6 +118,7 @@
                 
                 registerPanel.addChild(priceText);
             } else {
+                print("register change string in: " + string);
                 priceText.text = string;
                 priceText.visible = true;
                 priceText.offsetPosition = {

@@ -233,7 +233,7 @@
                 }
             });
             
-            
+            print("cart sent message");
             var messageObj = {senderEntity: _this.entityID, totalPrice: totalPrice};
             Messages.sendMessage(CART_REGISTER_CHANNEL, JSON.stringify(messageObj));
         },
