@@ -34,7 +34,7 @@
     
     function update(deltaTime) {
         _this.followAvatar();
-        _this.carryItems();
+        //_this.carryItems();
         
         if (Controller.getValue(Controller.Standard.RightPrimaryThumb)) {
             _this.resetCart();
@@ -262,10 +262,13 @@
                 Entities.editEntity(data.id, { dimensions: Vec3.multiply(oldDimension, scaleFactor) });
                 print("Item resized!");
                 
-                Entities.editEntity(data.id, { velocity: MyAvatar.getVelocity() }); // MyAvatar.getVelocity() should be zero at this time
+                Entities.editEntity(data.id, { velocity: {x: 0, y: 0, z: 0} });
                 var oldPosition = Entities.getEntityProperties(data.id).position;
                 var cartPosition = Entities.getEntityProperties(this.entityID).position;
                 relativeItemsPosition[itemsQuantity] = Vec3.subtract(oldPosition, cartPosition);
+                
+                //try to parent
+                Entities.editEntity(data.id, { parentID: this.entityID });
                 
                 
                 // debug prints

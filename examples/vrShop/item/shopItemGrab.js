@@ -444,7 +444,6 @@ function MyController(hand) {
         this.lineOff();
 
         var grabbedProperties = Entities.getEntityProperties(this.grabbedEntity, GRABBABLE_PROPERTIES);
-        //this.activateEntity(this.grabbedEntity, grabbedProperties);
         if (grabbedProperties.collisionsWillMove && NEAR_GRABBING_KINEMATIC) {
             Entities.editEntity(this.grabbedEntity, {
                 collisionsWillMove: false
@@ -770,7 +769,6 @@ function MyController(hand) {
             }
         }
 
-        //this.deactivateEntity(this.grabbedEntity);
 
         this.grabbedEntity = null;
         this.actionID = null;
@@ -782,52 +780,7 @@ function MyController(hand) {
         this.endHandGrasp();
     };
 
-    this.activateEntity = function(entityID, grabbedProperties) {
-        var grabbableData = getEntityCustomData(GRABBABLE_DATA_KEY, entityID, DEFAULT_GRABBABLE_DATA);
-        var invertSolidWhileHeld = grabbableData["invertSolidWhileHeld"];
-        var data = getEntityCustomData(GRAB_USER_DATA_KEY, entityID, {});
-        data["activated"] = true;
-        data["avatarId"] = MyAvatar.sessionUUID;
-        data["refCount"] = data["refCount"] ? data["refCount"] + 1 : 1;
-        // zero gravity and set ignoreForCollisions in a way that lets us put them back, after all grabs are done
-        if (data["refCount"] == 1) {
-            data["gravity"] = grabbedProperties.gravity;
-            data["ignoreForCollisions"] = grabbedProperties.ignoreForCollisions;
-            data["collisionsWillMove"] = grabbedProperties.collisionsWillMove;
-            var whileHeldProperties = {
-                gravity: {
-                    x: 0,
-                    y: 0,
-                    z: 0
-                }
-            };
-            if (invertSolidWhileHeld) {
-                whileHeldProperties["ignoreForCollisions"] = !grabbedProperties.ignoreForCollisions;
-            }
-            Entities.editEntity(entityID, whileHeldProperties);
-        }
 
-        setEntityCustomData(GRAB_USER_DATA_KEY, entityID, data);
-        return data;
-    };
-
-    this.deactivateEntity = function(entityID) {
-        var data = getEntityCustomData(GRAB_USER_DATA_KEY, entityID, {});
-        if (data && data["refCount"]) {
-            data["refCount"] = data["refCount"] - 1;
-            if (data["refCount"] < 1) {
-                Entities.editEntity(entityID, {
-                    gravity: data["gravity"],
-                    ignoreForCollisions: data["ignoreForCollisions"],
-                    collisionsWillMove: data["collisionsWillMove"]
-                });
-                data = null;
-            }
-        } else {
-            data = null;
-        }
-        setEntityCustomData(GRAB_USER_DATA_KEY, entityID, data);
-    };
 
 
     //this is our handler, where we do the actual work of changing animation settings
