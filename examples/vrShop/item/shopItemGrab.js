@@ -437,7 +437,7 @@ function MyController(hand) {
 
         if (this.state == STATE_NEAR_GRABBING && this.triggerSmoothedReleased()) {
             this.setState(STATE_RELEASE);
-            Entities.callEntityMethod(this.grabbedEntity, "releaseGrab");
+            //Entities.callEntityMethod(this.grabbedEntity, "releaseGrab");
             return;
         }
 
@@ -516,7 +516,7 @@ function MyController(hand) {
     this.continueNearGrabbing = function() {
         if (this.state == STATE_CONTINUE_NEAR_GRABBING && this.triggerSmoothedReleased()) {
             this.setState(STATE_RELEASE);
-            Entities.callEntityMethod(this.grabbedEntity, "releaseGrab");
+            //Entities.callEntityMethod(this.grabbedEntity, "releaseGrab");
             return;
         }
 
@@ -766,6 +766,8 @@ function MyController(hand) {
         if (this.grabbedEntity !== null) {
             if (this.actionID !== null) {
                 Entities.deleteAction(this.grabbedEntity, this.actionID);
+                Entities.callEntityMethod(this.grabbedEntity, "releaseGrab");
+                print("CALLING releaseGrab");
             }
         }
 
@@ -773,6 +775,7 @@ function MyController(hand) {
         this.grabbedEntity = null;
         this.actionID = null;
         this.setState(STATE_OFF);
+        
     };
 
     this.cleanup = function() {

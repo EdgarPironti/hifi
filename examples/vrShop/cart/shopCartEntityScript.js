@@ -262,14 +262,16 @@
                 Entities.editEntity(data.id, { dimensions: Vec3.multiply(oldDimension, scaleFactor) });
                 print("Item resized!");
                 
-                Entities.editEntity(data.id, { velocity: {x: 0, y: 0, z: 0} });
+                Entities.editEntity(data.id, { velocity: {x: 0.0, y: 0.0, z: 0.0} });
                 var oldPosition = Entities.getEntityProperties(data.id).position;
                 var cartPosition = Entities.getEntityProperties(this.entityID).position;
                 relativeItemsPosition[itemsQuantity] = Vec3.subtract(oldPosition, cartPosition);
                 
                 //try to parent
+                Vec3.print("Position cart: ", Entities.getEntityProperties(this.ent).position);
+                Vec3.print("Position pre parenting: ", Entities.getEntityProperties(data.id).position);
                 Entities.editEntity(data.id, { parentID: this.entityID });
-                
+                Vec3.print("Position post parenting: ", Entities.getEntityProperties(data.id).position);
                 
                 // debug prints
                 //Vec3.print("Relative position saved: ", relativeItemsPosition[(itemsQuantity === 1) ? itemsQuantity : itemsQuantity.num]);      
