@@ -67,7 +67,7 @@
         //   * connecting to the update signal so we can check our grabbed state
         preload: function(entityID) {
             this.entityID = entityID;
-            
+            print("PRELOAD: " + Entities.getEntityProperties(this.entityID).name + " " + entityID);
             inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
     
             print("--------- " + inspectEntityScript + " ---------------");
