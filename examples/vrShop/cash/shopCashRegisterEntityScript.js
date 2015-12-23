@@ -25,7 +25,6 @@
         if (senderID === MyAvatar.sessionUUID && channel == CART_REGISTER_CHANNEL) {
             var messageObj = JSON.parse(message);
             if (messageObj.senderEntity != _this.entityID) {
-                print("Register received message");
                 //create or update the Overlay
                 var price = messageObj.totalPrice.toFixed(2);
                 _this.cashRegisterOverlayOn("" + price + " $");
@@ -43,7 +42,6 @@
         //This method is called by the cashZone when an avatar comes in it
         //It has to find the cart belonging to that avatar and ask it the total price of the items
         cashRegisterOn: function() {
-            print("cashRegisterOn called");
             Messages.subscribe(CART_REGISTER_CHANNEL);
             Messages.messageReceived.connect(receivingMessage);
             // Entities.findEntities (center: vec3, radius: number): EntityItemID[]
@@ -60,13 +58,10 @@
                 }
             });
             if (cartID != null) {
-                print("Cart found! Its ID is: " + cartID);
                 payingAvatarID = MyAvatar.sessionUUID;
-                print("register sent message");
                 Messages.sendMessage(CART_REGISTER_CHANNEL, JSON.stringify({senderEntity: _this.entityID}));    //with this message the cart know that it has to compute and send back the total price of the items
                 Entities.callEntityMethod(cartID, 'singlePriceOn', null);
             } else {
-                print("Cart NOT found!");
                 payingAvatarID = null;
                 // Show anyway the pverlay with the price 0$
                 _this.cashRegisterOverlayOn("0 $");
@@ -85,7 +80,6 @@
         cashRegisterOverlayOn: function (string) {
             var stringOffset = string.length * 0.018;
             if (priceText == null) {
-                print("register create string: " + string);
                 
                 registerPanel = new OverlayPanel({
                     anchorPositionBinding: { entity: _this.entityID },
@@ -119,7 +113,6 @@
                 
                 registerPanel.addChild(priceText);
             } else {
-                print("register change string in: " + string);
                 priceText.text = string;
                 priceText.visible = true;
                 priceText.offsetPosition = {
@@ -135,7 +128,6 @@
             var entityOwnerID = getEntityCustomData('ownerKey', otherID, null).ownerID;
             if (entityName == CREDIT_CARD_NAME && entityOwnerID == payingAvatarID) {
                 //The register collided with the right credit card - CHECKOUT
-                print("CHECKOUT: total price is " + totalPrice + "$");
                 Entities.deleteEntity(otherID);
                 Entities.callEntityMethod(cartID, 'resetCart', null);
                 _this.cashRegisterOverlayOn("THANK YOU!");

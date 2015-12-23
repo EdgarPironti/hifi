@@ -48,7 +48,6 @@
             var messageObj = JSON.parse(message);
             //if (messageObj.senderEntity != _this.entityID && channel == actualCartRegisterChannel) {
             if (messageObj.senderEntity != _this.entityID) {
-                print("Cart received message");
                 //This means that the register wants the total price
                 _this.computeAndSendTotalPrice();
             }
@@ -180,7 +179,6 @@
             //create an array of text3D which follows the structure of the itemsID array. Each text3D is like the 'Store the item!' one
             var i = 0;
             itemsID.forEach( function(itemID) {
-                print("creating single price overlay");
                 singlePrices[i] = new OverlayPanel({
                     anchorPositionBinding: { entity: itemID },
                     //anchorRotationBinding: { entity: entityBindID },
@@ -217,7 +215,6 @@
         singlePriceOff: function () {
             //destroy or make invisible the text3D, or both
             singlePrices.forEach(function(panel) {
-                print("destroying single price");
                 panel.destroy();
             });
             singlePrices = [];
@@ -233,7 +230,6 @@
                 }
             });
             
-            print("cart sent message");
             var messageObj = {senderEntity: _this.entityID, totalPrice: totalPrice};
             Messages.sendMessage(CART_REGISTER_CHANNEL, JSON.stringify(messageObj));
         },
