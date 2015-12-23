@@ -71,7 +71,7 @@
         preload: function(entityID) {
             this.entityID = entityID;
             print("PRELOAD: " + Entities.getEntityProperties(this.entityID).name + " " + entityID);
-            inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
+            inspectEntityScript = Script.resolvePath("../../vrShop/inspect/shopInspectEntityScript.js");
     
             print("--------- " + inspectEntityScript + " ---------------");
             
