@@ -38,6 +38,8 @@
         
         if (Controller.getValue(Controller.Standard.RightPrimaryThumb)) {
             _this.resetCart();
+            _this.computeAndSendTotalPrice();
+            
         }
     };
     
@@ -147,7 +149,6 @@
                 relativeItemsPosition = [];
                 print("relative position array " + relativeItemsPosition.length);
                 
-                _this.computeAndSendTotalPrice();
             }
         },
         
@@ -195,7 +196,7 @@
                     ignoreRayIntersection: true,
                     dimensions: { x: 0, y: 0 },
                     backgroundColor: { red: 255, green: 255, blue: 255 },
-                    color: { red: 0, green: 255, blue: 0 },
+                    color: { red: 0, green: 0, blue: 0 },
                     topMargin: 0.00625,
                     leftMargin: 0.00625,
                     bottomMargin: 0.1,
@@ -302,7 +303,7 @@
                         ignoreRayIntersection: true,
                         dimensions: { x: 0, y: 0 },
                         backgroundColor: { red: 255, green: 255, blue: 255 },
-                        color: { red: 0, green: 255, blue: 0 },
+                        color: { red: 0, green: 0, blue: 0 },
                         topMargin: 0.00625,
                         leftMargin: 0.00625,
                         bottomMargin: 0.1,
