@@ -16,12 +16,13 @@
     
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
+    var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
     
     print("--------- " + overlayManagerScript + " ---------------");
+    print("--------- " + inspectEntityScript + " ---------------");
     
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
-    var inspectEntityScript = null; //see preload
     
     var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspRED.png";
     var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspGREEN.png";
@@ -71,9 +72,6 @@
         preload: function(entityID) {
             this.entityID = entityID;
             print("PRELOAD: " + Entities.getEntityProperties(this.entityID).name + " " + entityID);
-            inspectEntityScript = Script.resolvePath("../../vrShop/inspect/shopInspectEntityScript.js");
-    
-            print("--------- " + inspectEntityScript + " ---------------");
             
             Script.update.connect(update);
     
@@ -197,7 +195,6 @@
             
         
             if(!inspecting) {
-                print("---------start grab " + Script.resolvePath("../inspect/shopInspectEntityScript.js") + " ---------------");
                 inspectingEntity = Entities.addEntity({
                     type: "Box",
                     name: "inspectionEntity",
