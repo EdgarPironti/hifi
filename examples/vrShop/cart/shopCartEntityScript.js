@@ -4,7 +4,9 @@
     //we're at hifi\examples\vrShop\cart\
     
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
+    var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     Script.include(utilitiesScript);
+    Script.include(overlayManagerScript);
     
     // HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
     // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
@@ -253,6 +255,7 @@
             if (itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
                 // if itemsQuantity == fullCart resize all the items present in the cart and change the scaleFactor for this and next insert
 
+            
                 print("Going to put item in the cart!");
                 var itemsQuantity = itemsID.length;
                 

@@ -302,11 +302,7 @@
             inspectPanel.destroy();
             cartPanel.destroy();
             
-            var entityProperties = Entities.getEntityProperties(_this.entityID);
-            var userDataObj = JSON.parse(entityProperties.userData);
-            var availabilityNumber = userDataObj.infoKey.availability;
-            
-            if (zoneID !== null && availabilityNumber > 0) {
+            if (zoneID !== null) {
                 
                 print("Got here. Entity ID is: " + _this.entityID);
                 //Entities.callEntityMethod(zoneID, 'doSomething', this.entityID);
@@ -341,6 +337,15 @@
                 } else if (statusObj.status == "inCart") {
                     Entities.deleteEntity(inspectingEntity);
                     inspectingEntity = null;
+                    
+                    var entityProperties = Entities.getEntityProperties(this.entityID);
+                    var userDataObj = JSON.parse(entityProperties.userData);
+                    var availabilityNumber = userDataObj.infoKey.availability;
+                    //if the item is no more available, destroy it
+                    if (availabilityNumber == 0) {
+                        print("destroying the item");
+                        Entities.deleteEntity(this.entityID);
+                    }
                     print("inCart is TRUE");
                     inCart = true;
                 } else { // any other zone
@@ -348,7 +353,7 @@
                     inspectingEntity = null;
                 }
                 
-            } else { // ZoneID is null, released somewhere that is not a zone. Or alailability is zero
+            } else { // ZoneID is null, released somewhere that is not a zone.
                 Entities.deleteEntity(inspectingEntity);
                 inspectingEntity = null;
                 Entities.deleteEntity(this.entityID);
