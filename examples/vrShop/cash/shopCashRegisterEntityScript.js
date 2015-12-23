@@ -39,13 +39,13 @@
         preload: function (entityID) {
             this.entityID = entityID;
             Messages.messageReceived.connect(receivingMessage);
-            Messages.subscribe(CART_REGISTER_CHANNEL);
         },
         
         //This method is called by the cashZone when an avatar comes in it
         //It has to find the cart belonging to that avatar and ask it the total price of the items
         cashRegisterOn: function() {
             print("cashRegisterOn called");
+            Messages.subscribe(CART_REGISTER_CHANNEL);
             // Entities.findEntities (center: vec3, radius: number): EntityItemID[]
             var cashRegisterPosition = Entities.getEntityProperties(_this.entityID).position;
             var foundEntities = Entities.findEntities(cashRegisterPosition, 50);
@@ -73,6 +73,7 @@
         },
         
         cashRegisterOff: function() {
+            Messages.unsubscribe(CART_REGISTER_CHANNEL);
             priceText.visible = false;
             if (cartID != null) {
                 Entities.callEntityMethod(cartID, 'singlePriceOff', null);
@@ -148,7 +149,6 @@
         unload: function (entityID) {
             _this.clean();
             Messages.messageReceived.disconnect(receivingMessage);      //this doesn't go in the clean() because it not depends from the cart but from the Avatar
-            Messages.unsubscribe(CART_REGISTER_CHANNEL);
             registerPanel.destroy();
             registerPanel = priceText = null;
         }
