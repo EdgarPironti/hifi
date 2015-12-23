@@ -16,6 +16,9 @@
     
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
+    
+    print("--------- " + overlayManagerScript + " ---------------");
+    
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
     var inspectEntityScript = null; //see preload
@@ -77,7 +80,6 @@
             MIN_DIMENSION_THRESHOLD = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions)/2;
             MAX_DIMENSION_THRESHOLD = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions)*2;
             radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
-            //inspectRadius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0; //??
             
         },
         
@@ -195,6 +197,7 @@
             
         
             if(!inspecting) {
+                print("---------start grab " + Script.resolvePath("../inspect/shopInspectEntityScript.js") + " ---------------");
                 inspectingEntity = Entities.addEntity({
                     type: "Box",
                     name: "inspectionEntity",
