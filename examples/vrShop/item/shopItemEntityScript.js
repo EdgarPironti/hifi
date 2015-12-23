@@ -18,9 +18,7 @@
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
-    var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
-    
-    print("--------- " + inspectEntityScript + " ---------------");
+    var inspectEntityScript = null; //see preload
     
     var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspRED.png";
     var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspGREEN.png";
@@ -69,6 +67,11 @@
         //   * connecting to the update signal so we can check our grabbed state
         preload: function(entityID) {
             this.entityID = entityID;
+            
+            inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
+    
+            print("--------- " + inspectEntityScript + " ---------------");
+            
             Script.update.connect(update);
     
             MIN_DIMENSION_THRESHOLD = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions)/2;
