@@ -14,9 +14,6 @@
 (function() {
     //we're at hifi\examples\vrShop\inspect\
     
-    //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");    //doesn't work
-    //Script.include('../libraries/overlayManager.js'); //doesn't work
-    //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     Script.include(utilitiesScript);

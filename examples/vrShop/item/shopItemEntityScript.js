@@ -19,11 +19,8 @@
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
     var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
-    //Script.include("C:\\Users\\Proprietario\\Desktop\\overlayManager.js");
-    //Script.include('../libraries/overlayManager.js'); //doesn't work
-    //Script.include("http://s3.amazonaws.com/hifi-content/alessandro/dev/JS/libraries/overlayManager.js");
-    //Script.include("http://s3.amazonaws.com/hifi-public/scripts/libraries/overlayManager.js");
     
+    print("--------- " + inspectEntityScript + " ---------------");
     
     var RED_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspRED.png";
     var GREEN_IMAGE_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/inspGREEN.png";
