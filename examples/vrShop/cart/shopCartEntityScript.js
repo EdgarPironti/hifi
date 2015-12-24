@@ -16,14 +16,13 @@
     var cartIsMine = false;
     var originalY = 0;
     var itemsID = [];
-    var relativeItemsPosition = [];
+    //var relativeItemsPosition = [];
     var scaleFactor = 0.7; //The scale factor will dipend on the number of items in the cart. We would resize even the items already present.                
     var cartTargetPosition;
-    var cartTargetRotation;
     var singlePrices = [];
     var singlePriceTagsAreShowing = false;
     
-    var zoneID = null;
+    var collidedItemID = null;
     var PENETRATION_THRESHOLD = 0.2;
 
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
@@ -75,14 +74,14 @@
                 print("PRELOAD USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
             }
         },
-        
+        /*
         carryItems: function() {
             for (var i=0; i < itemsID.length; i++) {
                 var newPosition = Vec3.sum(Entities.getEntityProperties(_this.entityID).position, relativeItemsPosition[i]);
                 Entities.editEntity(itemsID[i], { position: newPosition });
             }
         },
-        
+        */
         followAvatar: function() {
             if (Vec3.length(MyAvatar.getVelocity()) > 0.1) {
                 //update cart target position and orientation
@@ -99,6 +98,10 @@
                 //give to the cart the proper velocity and make it ignore for collision
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
                 Entities.editEntity(_this.entityID, { ignoreForCollisions: true });
+                if (collidedItemID != null) {
+                    Entities.callEntityMethod(collidedItemID, 'setCartOverlayNotVisible', null);
+                    collidedItemID = null;
+                }
             } else if (Vec3.length(positionDifference) > 0.01) {
                 //give to the cart the proper velocity and make it NOT ignore for collision
                 Entities.editEntity(_this.entityID, { velocity: positionDifference });
@@ -145,9 +148,10 @@
                 print("itemsQuantity after: " + itemsID.length);
                 
                 // Clean the relativePostion array
+                /*
                 relativeItemsPosition = [];
                 print("relative position array " + relativeItemsPosition.length);
-                
+                */
             }
         },
         
@@ -160,7 +164,7 @@
             for (var i=0; i < itemsID.length; i++) {
                 if(itemsID[i] == data.id) {
                     itemsID.splice(i, 1);
-                    relativeItemsPosition.splice(i,1);
+                    //relativeItemsPosition.splice(i,1);
                     //if the price tags are showing we have to remove also the proper tag
                     if (singlePriceTagsAreShowing) {
                         singlePrices[i].destroy();
@@ -235,6 +239,7 @@
         },
         
         doSomething: function (entityID, dataArray) {
+            collidedItemID = null;
             var data = JSON.parse(dataArray[0]);
             var itemOwnerObj = getEntityCustomData('ownerKey', data.id, null);
             print("------- The owner of the item is: " + ((itemOwnerObj == null) ? itemOwnerObj : itemOwnerObj.ownerID));
@@ -263,13 +268,15 @@
                 print("Item resized!");
                 
                 Entities.editEntity(data.id, { velocity: {x: 0.0, y: 0.0, z: 0.0} });
+                //we want to set also the angular velocity to null?
+                
+                /*
                 var oldPosition = Entities.getEntityProperties(data.id).position;
                 var cartPosition = Entities.getEntityProperties(this.entityID).position;
                 relativeItemsPosition[itemsQuantity] = Vec3.subtract(oldPosition, cartPosition);
+                */
                 
-                //try to parent
-                Vec3.print("Position cart: ", Entities.getEntityProperties(this.ent).position);
-                Vec3.print("Position pre parenting: ", Entities.getEntityProperties(data.id).position);
+                // parent item to the cart
                 Entities.editEntity(data.id, { parentID: this.entityID });
                 Vec3.print("Position post parenting: ", Entities.getEntityProperties(data.id).position);
                 
@@ -277,7 +284,7 @@
                 //Vec3.print("Relative position saved: ", relativeItemsPosition[(itemsQuantity === 1) ? itemsQuantity : itemsQuantity.num]);      
                 itemsQuantity = itemsID.length;
                 print("Item " + itemsQuantity + itemsID[itemsQuantity-1] + " inserted! New quantity: " + itemsQuantity);
-                relativeItemsPosition.forEach( function(p) { Vec3.print("", p) });
+                //relativeItemsPosition.forEach( function(p) { Vec3.print("", p) });
                 
                 setEntityCustomData('statusKey', data.id, {
                     status: "inCart"
@@ -331,15 +338,15 @@
             var cartOwnerObj = getEntityCustomData('ownerKey', myID, null);
             var itemOwnerObj = getEntityCustomData('ownerKey', otherID, null);
             
-            if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
-                zoneID = otherID;
-                if (itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
+            if (penetrationValue > PENETRATION_THRESHOLD && collidedItemID === null) {
+                if (itemOwnerObj != null && itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
                     Entities.callEntityMethod(otherID, 'setCartOverlayVisible', null);
+                    collidedItemID = otherID;
                 }
-            } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null) {
-                zoneID = null;
-                if (itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
+            } else if (penetrationValue < PENETRATION_THRESHOLD && collidedItemID !== null) {
+                if (itemOwnerObj != null && itemOwnerObj.ownerID === cartOwnerObj.ownerID) {
                     Entities.callEntityMethod(otherID, 'setCartOverlayNotVisible', null);
+                    collidedItemID = null;
                 }
             }
         },

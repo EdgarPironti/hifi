@@ -48,7 +48,7 @@
     var rightController = null;     //rightController and leftController are two objects
     var leftController = null;
     var workingHand = null;
-    var zoneID = null;
+    var collidedItemID = null;
     var itemDescriptionString = null;
     var priceNumber = -1;
     var availabilityNumber = -1;
@@ -579,28 +579,53 @@
 
         
         collisionWithEntity: function(myID, otherID, collisionInfo) {
+            
+            var itemObj = getEntityCustomData('itemKey', _this.entityID, null);
+            if (itemObj != null) {
+                if (itemObj.itemID == otherID) {        //verify that the inspect area is colliding with the actual item which created it
+                    
+                    var penetrationValue = Vec3.length(collisionInfo.penetration);
+                    //print("Value: " +  penetrationValue);
+                    if (penetrationValue > PENETRATION_THRESHOLD && collidedItemID === null) {
+                        collidedItemID = otherID;
+                        print("Start collision with: " + Entities.getEntityProperties(collidedItemID).name);
+                        Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
+                        
+                    } else if (penetrationValue < PENETRATION_THRESHOLD && collidedItemID !== null) {
+                        
+                        print("End collision with: " + Entities.getEntityProperties(collidedItemID).name);
+                        collidedItemID = null;
+                        //print("Zone: " + collidedItemID);
+                        //print("Going to call the change color to green");
+                        Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
+                    }
+                }
+            }
+            
+            /*
             var penetrationValue = Vec3.length(collisionInfo.penetration);
             //print("Value: " +  penetrationValue);
-            if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
-                zoneID = otherID;
-                print("Zone: " + zoneID);
+            if (penetrationValue > PENETRATION_THRESHOLD && collidedItemID === null) {
+                collidedItemID = otherID;
+                print("Zone: " + collidedItemID);
                 
-                var itemObj = getEntityCustomData('itemKey', this.entityID, null);
+                var itemObj = getEntityCustomData('itemKey', _this.entityID, null);
                 //print("------- The entity in the inspect zone is: " + ((itemObj == null) ? itemObj : itemObj.itemID));
                 
                 if (itemObj != null) {
-                    if (itemObj.itemID == otherID) {
+                    if (itemObj.itemID == otherID) {        //verify that the inspect area is colliding with the actual item which created it
                         // change overlay color
                         //print("Going to call the change color to red");
                         Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
                     }
                 }
-            } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null) {
-                zoneID = null;
-                //print("Zone: " + zoneID);
+            } else if (penetrationValue < PENETRATION_THRESHOLD && collidedItemID !== null) {
+                collidedItemID = null;
+                //print("Zone: " + collidedItemID);
                 //print("Going to call the change color to green");
                 Entities.callEntityMethod(otherID, 'changeOverlayColor', null);
             }
+            */
         },
         
         changeModel: function(index) {

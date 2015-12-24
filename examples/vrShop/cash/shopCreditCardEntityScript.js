@@ -15,15 +15,15 @@ var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
          _this = this;
     };
     
-    function update(deltaTime) {
-        if (myCard) {
-            Entities.editEntity(_this.entityID, { velocity: {x: 0, y: 0, z: 0},
-                                                  angularVelocity: CARD_ANGULAR_VELOCITY,
-                                                  angularDamping: 0,
-                                                  position: entityProperties.position
-                                                });
-        }
-    };
+    // function update(deltaTime) {
+        // if (myCard) {
+            // Entities.editEntity(_this.entityID, { velocity: {x: 0, y: 0, z: 0},
+                                                  // angularVelocity: CARD_ANGULAR_VELOCITY,
+                                                  // angularDamping: 0,
+                                                  // position: entityProperties.position
+                                                // });
+        // }
+    // };
     
     DetectGrabbed.prototype = {
         
@@ -33,14 +33,22 @@ var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
             if (ownerObj.ownerID === MyAvatar.sessionUUID) {
                 myCard = true;
                 entityProperties = Entities.getEntityProperties(this.entityID);
-                Script.update.connect(update);
+                //Script.update.connect(update);
             }
         },
         
+        releaseGrab: function () {
+            Entities.editEntity(_this.entityID, /*{ velocity: {x: 0, y: 0, z: 0},
+                                                  angularVelocity: entityProperties.angularVelocity,
+                                                  rotation: entityProperties.rotation,
+                                                  position: entityProperties.position
+                                                }*/ entityProperties);
+        },
+        
         unload: function (entityID) {
-            if (myCard) {
-                Script.update.disconnect(update);
-            }
+            // if (myCard) {
+                // Script.update.disconnect(update);
+            // }
             Entities.deleteEntity(this.entityID);
         }
     };

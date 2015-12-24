@@ -296,7 +296,7 @@
             
             print("I was released... entity:" + _this.entityID);
             Entities.editEntity(_this.entityID, { ignoreForCollisions: true });
-            print("zoneID is " + zoneID);
+            print("zone is " + Entities.getEntityProperties(zoneID).name);
             
             // Destroy overlay
             inspectPanel.destroy();
@@ -369,10 +369,10 @@
             //print("Value: " +  penetrationValue);
             if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
                 zoneID = otherID;
-                print("Zone: " + zoneID);
-            } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null) {
+                print("Item IN: " + Entities.getEntityProperties(zoneID).name);
+            } else if (penetrationValue < PENETRATION_THRESHOLD && zoneID !== null && otherID == zoneID) {
+                print("Item OUT: " + Entities.getEntityProperties(zoneID).name);
                 zoneID = null;
-                print("Zone: " + zoneID);
             }
         },
         
