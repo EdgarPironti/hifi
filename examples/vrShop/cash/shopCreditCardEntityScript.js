@@ -1,13 +1,15 @@
 // shopCreditCardEntityscript.js
 //
 
-var _this;
-var entityProperties = null;
-var myCard = false;
 
-var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
 
 (function() {
+    
+    var _this;
+    var entityProperties = null;
+    //var myCard = false;
+
+    //var CARD_ANGULAR_VELOCITY = {x: 0, y: 2, z: 0};
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)

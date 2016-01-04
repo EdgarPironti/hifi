@@ -220,8 +220,6 @@
         } else if (isUIWorking) {
             //clean all the UI stuff
             // Destroy rays
-            // leftController.clean();
-            // rightController.clean();
             workingHand.clean();
             
             // Destroy overlay
@@ -255,12 +253,8 @@
         doSomething: function (entityID, dataArray) {
             var data = JSON.parse(dataArray[0]);
             var itemOwnerObj = getEntityCustomData('ownerKey', data.id, null);
-            //print("------- The owner of the item is: " + ((itemOwnerObj == null) ? itemOwnerObj : itemOwnerObj.ownerID));
-            //print("item ID: " + data.id);
             
             var inspectOwnerObj = getEntityCustomData('ownerKey', this.entityID, null);
-            //print("------- The owner of the inspectZone is: " + ((inspectOwnerObj == null) ? inspectOwnerObj : inspectOwnerObj.ownerID));
-            //print("zone ID: " + this.entityID);
             
             if (inspectOwnerObj == null) {
                 //print("The inspectZone doesn't have a owner.");
@@ -297,10 +291,6 @@
             Entities.editEntity(_this.entityID, { position: newPosition });
             
             newRotation = MyAvatar.orientation;
-            // var oldRotation = Quat.safeEulerAngles(Entities.getEntityProperties(_this.entityID).rotation); //vec3
-            // var newY = Quat.safeEulerAngles(Camera.getOrientation()).y;
-            // var newRotationVec3 = {x: oldRotation.x, y: newY, z: oldRotation.z};
-            // newRotation = Quat.fromVec3Degrees(newRotationVec3);
             Entities.editEntity(_this.entityID, { rotation: newRotation });
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
