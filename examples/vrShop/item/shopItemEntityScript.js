@@ -18,9 +18,6 @@
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
     
-    print("--------- " + overlayManagerScript + " ---------------");
-    print("--------- " + inspectEntityScript + " ---------------");
-    
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
     

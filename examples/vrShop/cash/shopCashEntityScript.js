@@ -32,11 +32,6 @@
             print("Play sent.");
             
             // find register
-            // var entitiesInZone = Entities.findEntitiesInBox(Entities.getEntityProperties(entityID).position, Entities.getEntityProperties(entityID).dimensions); 
-            // Vec3.print("Dimension: ", Entities.getEntityProperties(entityID).dimensions);
-            // Vec3.print("Position: ", Entities.getEntityProperties(entityID).position);
-            // Vec3.print("AvPos: ", MyAvatar.position);
-            
             var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(entityID).position, (Entities.getEntityProperties(entityID).dimensions.x)/2); 
             entitiesInZone.forEach( function(e) {
                 if (Entities.getEntityProperties(e).name == REGISTER_NAME) {

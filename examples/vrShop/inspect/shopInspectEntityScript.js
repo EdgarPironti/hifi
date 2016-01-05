@@ -53,10 +53,9 @@
     var priceNumber = -1;
     var availabilityNumber = -1;
     var avatarEntity = null;
-    var tempTryEntity;
-    
-    var newPosition = null;
-    var newRotation = null;
+    var tempTryEntity = null;
+    var tryingOnAvatar = false;
+    var itemOriginalDimensions = null;
     
     var mainPanel = null;
     var mirrorPanel = null;
@@ -148,6 +147,7 @@
         //the update of each hand has to update the ray belonging to that hand and handle the bumper event
         this.updateHand = function() {
             
+            
             //detect the bumper event
             var bumperPressed = Controller.getValue(this.bumper);
             if (bumperPressed && this != workingHand) {
@@ -194,46 +194,75 @@
                     if (nextButton == triggeredButton) {
                         print("Next pressed!");
                         
-                        // Code for the overlay text for the mirror.
+                        var itemPositionWhileTrying = null;
+                        switch (Entities.getEntityProperties(inspectedEntityID).name) {
+                            case "Item_Sunglasses":
+                                itemPositionWhileTrying = {x: 0, y: 0.04, z: 0.05};
+                                break;
+                            case "Item_Hat":
+                                itemPositionWhileTrying = {x: 0, y: 0.16, z: 0.025};
+                                break;
+                            default:
+                                //not an item that can be tried on - do nothing
+                                return;
+                        }
                         
-                        // mirrorPanel = new OverlayPanel({
-                            // anchorPositionBinding: { avatar: MyAvatar.sessionUUID },
-                            // //anchorRotationBinding: { entity: _this.entityID },
+                        //Code for the overlay text for the mirror.
+                        
+                        
+                        mirrorPanel = new OverlayPanel({
+                            anchorPositionBinding: { avatar: "MyAvatar" },
+                            anchorRotationBinding: { avatar: "MyAvatar" },
+                                offsetPosition: {
+                                x: 0.5,
+                                y: 0.95,
+                                z: 0
+                            },
+                            offsetRotation: Quat.fromVec3Degrees({x: 0, y: 180, z: 0}),
                             
-                            // // isFacingAvatar: false
-                        // });
-                        // var mirrorText = new Text3DOverlay({
-                            // text: "Press any key to go back in inspection.",
-                            // isFacingAvatar: true,
-                            // alpha: 1.0,
-                            // ignoreRayIntersection: true,
-                            // offsetPosition: {
-                                // x: 0,
-                                // y: 0,
-                                // z: 0
-                            // },
-                            // dimensions: { x: 0, y: 0 },
-                            // backgroundColor: { red: 255, green: 255, blue: 255 },
-                            // color: { red: 0, green: 0, blue: 0 },
-                            // topMargin: 0.00625,
-                            // leftMargin: 0.00625,
-                            // bottomMargin: 0.1,
-                            // rightMargin: 0.00625,
-                            // lineHeight: 0.02,
-                            // alpha: 1,
-                            // backgroundAlpha: 0.3
-                        // });
+                            isFacingAvatar: false
+                        });
+                        var mirrorText = new Text3DOverlay({
+                            text: "Press any key to go back in inspection.",
+                            isFacingAvatar: false,
+                            ignoreRayIntersection: true,
+
+                            
+                            dimensions: { x: 0, y: 0 },
+                            backgroundColor: { red: 255, green: 255, blue: 255 },
+                            color: { red: 200, green: 0, blue: 0 },
+                            topMargin: 0.00625,
+                            leftMargin: 0.00625,
+                            bottomMargin: 0.1,
+                            rightMargin: 0.00625,
+                            lineHeight: 0.05,
+                            alpha: 1,
+                            backgroundAlpha: 0.3,
+                            visible: true
+                        });
+                        mirrorPanel.addChild(mirrorText);
                         
-                        // mirrorPanel.addChild(mirrorText);
+                        tryingOnAvatar = true;
                         
-                        Camera.setModeString("mirror");
-                        var entityProperties = Entities.getEntityProperties(inspectedEntityID); 
+                        //Clean inspect Overlays and related stuff
+                        workingHand.clean();
+                        Entities.deleteEntity(avatarEntity);
+                        avatarEntity = null;
+                        mainPanel.destroy();
+                        isUIWorking = false;
+                        Entities.editEntity(inspectedEntityID, { visible: false });     //the inspected item becomes invisible
+                        
+                        
+                        //Camera.setModeString("mirror");
+                        Camera.mode = "entity";
+                        Camera.cameraEntity = _this.entityID;
+                        var entityProperties = Entities.getEntityProperties(inspectedEntityID);
                         tempTryEntity = Entities.addEntity({
                             type: entityProperties.type,
                             name: entityProperties.name,
-                            localPosition:  {x: 0, y: 0.1, z: 0},
-                            dimensions: entityProperties.dimensions,
-                            rotation: entityProperties.rotation,
+                            localPosition: itemPositionWhileTrying,
+                            dimensions: itemOriginalDimensions,
+                            //rotation: entityProperties.rotation,
                             collisionsWillMove: false,
                             ignoreForCollisions: true,
                             modelURL: entityProperties.modelURL,
@@ -242,7 +271,7 @@
                             parentID: MyAvatar.sessionUUID,
                             parentJointIndex: MyAvatar.getJointIndex("Head")
                         });
-                    }         
+                    }
                 }
             } else if (!bumperPressed && this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = false;
@@ -259,14 +288,19 @@
     
     function update(deltaTime) {
         
-        if(Controller.getValue(Controller.Standard.RightPrimaryThumb || Controller.Standard.LeftPrimaryThumb)) {
-            Camera.setModeString("first person");
-            mirrorPanel.destroy();
-            Entities.deleteEntity(tempTryEntity);
-        }
-        
-        //the if condition should depend from other stuff
-        if (inspecting) {
+        if (tryingOnAvatar) {
+            // if trying the item on avatar, wait for a button pressed to exit this mode
+            if(Controller.getValue(Controller.Standard.RightPrimaryThumb || Controller.Standard.LeftPrimaryThumb)) {
+                //Camera.setModeString("first person");
+                Camera.mode = "first person";
+                mirrorPanel.destroy();
+                Entities.deleteEntity(tempTryEntity);
+                Entities.editEntity(inspectedEntityID, { visible: true });
+                _this.createInspectUI();
+                tryingOnAvatar = false;
+            }
+            return;
+        } else if (inspecting) {
             //update the rays from both hands
             leftController.updateHand();
             rightController.updateHand();
@@ -279,7 +313,7 @@
                 inspectedEntityID = null;
             }
         } else if (isUIWorking) {
-            //clean all the UI stuff
+            //getting here when the inspect phase end, so we want to clean the UI
             // Destroy rays
             workingHand.clean();
             
@@ -331,6 +365,7 @@
                 });
                 //print("Set status!");
                 _this.createInspectUI();
+                itemOriginalDimensions = Entities.getEntityProperties(inspectedEntityID).dimensions;
                 
                 //Entities.editEntity(_this.entityID, { visible: true });
                 
@@ -348,11 +383,18 @@
             
             newRotation = Camera.getOrientation();
             */
-            newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(MyAvatar.orientation), inspectRadius)); 
+            var newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(MyAvatar.orientation), inspectRadius)); 
             Entities.editEntity(_this.entityID, { position: newPosition });
             
-            newRotation = MyAvatar.orientation;
-            Entities.editEntity(_this.entityID, { rotation: newRotation });
+            var newRotation;
+            if (tryingOnAvatar) {
+                newRotation = Vec3.sum(Quat.safeEulerAngles(MyAvatar.orientation), {x:0, y: 180, z: 0});        //neccessary to set properly the camera in entity mode when trying on avatar
+                //Entities.editEntity(_this.entityID, { rotation: newRotation });
+                Entities.editEntity(_this.entityID, { rotation: Quat.fromVec3Degrees(newRotation) });
+            } else {
+                newRotation = MyAvatar.orientation;
+                Entities.editEntity(_this.entityID, { rotation: newRotation });
+            }
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
 

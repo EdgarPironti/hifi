@@ -144,7 +144,9 @@
 
         unload: function (entityID) {
             _this.clean();
-            registerPanel.destroy();
+            if (registerPanel != null) {
+                registerPanel.destroy();
+            }
             registerPanel = priceText = null;
         }
     }
