@@ -8,15 +8,12 @@
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
     
-    // HIFI_PUBLIC_BUCKET = "http://s3.amazonaws.com/hifi-public/";
-    // Script.include(HIFI_PUBLIC_BUCKET + "scripts/libraries/utils.js");
     var COMFORT_ARM_LENGTH = 0.5;
     var CART_REGISTER_CHANNEL = "Hifi-vrShop-Register";
     var _this;
     var cartIsMine = false;
     var originalY = 0;
     var itemsID = [];
-    //var relativeItemsPosition = [];
     var scaleFactor = 0.7; //The scale factor will dipend on the number of items in the cart. We would resize even the items already present.                
     var cartTargetPosition;
     var singlePrices = [];
@@ -33,7 +30,6 @@
     
     function update(deltaTime) {
         _this.followAvatar();
-        //_this.carryItems();
         
         if (Controller.getValue(Controller.Standard.RightPrimaryThumb)) {
             _this.resetCart();
@@ -43,10 +39,11 @@
     };
     
     function receivingMessage(channel, message, senderID) {     //The senderID is the ID of the Avatar who runs the interface, not the ID on the entity which calls sendMessage()
+        print(" *** Avatar in cart.js received a message");
         if (senderID === MyAvatar.sessionUUID && channel == CART_REGISTER_CHANNEL) {
             var messageObj = JSON.parse(message);
-            //if (messageObj.senderEntity != _this.entityID && channel == actualCartRegisterChannel) {
             if (messageObj.senderEntity != _this.entityID) {
+                print("--------------- cart received message");
                 //This means that the register wants the total price
                 _this.computeAndSendTotalPrice();
             }
@@ -71,22 +68,14 @@
                 Script.update.connect(update);
                 Messages.subscribe(CART_REGISTER_CHANNEL);
                 Messages.messageReceived.connect(receivingMessage);
-                print("PRELOAD USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
+                print("PRELOAD CART USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
             }
         },
-        /*
-        carryItems: function() {
-            for (var i=0; i < itemsID.length; i++) {
-                var newPosition = Vec3.sum(Entities.getEntityProperties(_this.entityID).position, relativeItemsPosition[i]);
-                Entities.editEntity(itemsID[i], { position: newPosition });
-            }
-        },
-        */
+        
         followAvatar: function() {
             if (Vec3.length(MyAvatar.getVelocity()) > 0.1) {
                 //update cart target position and orientation
                 var radius = (Entities.getEntityProperties(_this.entityID).dimensions.x) / 2 + COMFORT_ARM_LENGTH;
-                //Vec3.length(Entities.getEntityProperties(_this.entityID).dimensions) / 2.0; //old radius
                 var properY = MyAvatar.position.y + ((MyAvatar.getHeadPosition().y - MyAvatar.position.y) / 2);
                 var targetPositionPrecomputing = {x: MyAvatar.position.x, y: properY, z: MyAvatar.position.z};
                 cartTargetPosition = Vec3.sum(targetPositionPrecomputing, Vec3.multiply(Quat.getRight(MyAvatar.orientation), radius));
@@ -116,11 +105,10 @@
 
         },
         
-        resetCart: function (entityID) {
+        resetCart: function () {
             
             print("RESET CART - USER DATA: " + Entities.getEntityProperties(_this.entityID).userData);
             
-            print("itemsQuantity before: " + itemsID.length);
             if (itemsID.length != 0) {
                 if (singlePriceTagsAreShowing) {
                     _this.singlePriceOff();
@@ -129,7 +117,6 @@
                 for (var i=0; i < itemsID.length; i++) {
                     Entities.deleteEntity(itemsID[i]);
                 }
-                print("Entities removed");
                 
                 // Delete the userData fields for the items
                 // set userData in a destructive way
@@ -143,15 +130,7 @@
                     grabbable: false
                 });
                 
-                print("userData clean");
                 itemsID = [];
-                print("itemsQuantity after: " + itemsID.length);
-                
-                // Clean the relativePostion array
-                /*
-                relativeItemsPosition = [];
-                print("relative position array " + relativeItemsPosition.length);
-                */
             }
         },
         
@@ -173,7 +152,6 @@
                 }
             }
             
-            print("Number of items in cart: " + itemsID.length);
             itemsID.forEach( function(p) { print(p) });
             
             _this.computeAndSendTotalPrice();
@@ -225,6 +203,7 @@
             singlePriceTagsAreShowing = false;
         },
         
+        //Send to the register the total price for all the items in the cart
         computeAndSendTotalPrice: function () {
             var totalPrice = 0;
             itemsID.forEach( function(itemID) {
@@ -265,32 +244,15 @@
                 
                 var oldDimension = Entities.getEntityProperties(data.id).dimensions;
                 Entities.editEntity(data.id, { dimensions: Vec3.multiply(oldDimension, scaleFactor) });
-                print("Item resized!");
-                
                 Entities.editEntity(data.id, { velocity: {x: 0.0, y: 0.0, z: 0.0} });
-                //we want to set also the angular velocity to null?
-                
-                /*
-                var oldPosition = Entities.getEntityProperties(data.id).position;
-                var cartPosition = Entities.getEntityProperties(this.entityID).position;
-                relativeItemsPosition[itemsQuantity] = Vec3.subtract(oldPosition, cartPosition);
-                */
-                
                 // parent item to the cart
                 Entities.editEntity(data.id, { parentID: this.entityID });
-                Vec3.print("Position post parenting: ", Entities.getEntityProperties(data.id).position);
                 
-                // debug prints
-                //Vec3.print("Relative position saved: ", relativeItemsPosition[(itemsQuantity === 1) ? itemsQuantity : itemsQuantity.num]);      
                 itemsQuantity = itemsID.length;
-                print("Item " + itemsQuantity + itemsID[itemsQuantity-1] + " inserted! New quantity: " + itemsQuantity);
-                //relativeItemsPosition.forEach( function(p) { Vec3.print("", p) });
                 
                 setEntityCustomData('statusKey', data.id, {
                     status: "inCart"
                 });
-                
-                print("Set status!");
                 
                 _this.computeAndSendTotalPrice();
                 

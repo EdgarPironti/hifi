@@ -40,7 +40,7 @@
                 }
             });
              
-            // create card on register position
+            // create card above register position
             
             var cardPosition = Vec3.sum(Entities.getEntityProperties(cashRegisterID).position, CARD_POSITION_OFFSET);
             var cardOrientationQuat = Quat.fromVec3Degrees(CARD_INITIAL_ORIENTATION);
@@ -56,6 +56,7 @@
                 angularVelocity: CARD_ANGULAR_VELOCITY,
                 angularDamping: 0,
                 script: Script.resolvePath(SCRIPT_URL),
+                // We have to put the ownerID in the card, and check that when grabbing the card. Otherwise it cannot be grabbed
                 userData: JSON.stringify({
                     ownerKey: {
                         ownerID: MyAvatar.sessionUUID
@@ -63,7 +64,6 @@
                 }),
                 modelURL: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/CreditCard.fbx",
                 shapeType: "box"
-                // We have to put the ownerID in the card, and check that when grabbing the card. Otherwise it cannot be grabbed
             });
             
             Entities.callEntityMethod(cashRegisterID, 'cashRegisterOn', null);
@@ -78,7 +78,6 @@
         },
 
         unload: function (entityID) {
-           
         }
     }
 

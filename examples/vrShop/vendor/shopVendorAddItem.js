@@ -2,9 +2,6 @@
 
 var TITLE = "Add Item Form";
 var DEFAULT_ITEM_NAME = "New Item";
-//var DEFAULT_ROOT_URL = "none";
-//var DEFAULT_MODEL_URL = "none";
-//var DEFAULT_PREVIEW_URL = "none";
 var DEFAULT_ROOT_DIRECTORY_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/";
 var DEFAULT_MODEL_1_RELATIVE_PATH = "cubeRed.fbx";          // those paths are relative to the root directory url
 var DEFAULT_PREVIEW_1_RELATIVE_PATH = "previewRed.png";
@@ -36,6 +33,7 @@ var form = [
     {"label": "Quantity", "value": DEFAULT_QUANTITY},
     {"label": "Price", "value": DEFAULT_PRICE},
     {"label": "Description", "value": DEFAULT_DESCRIPTION},
+    {"label": "Wearable", "type": "checkbox", "value": false},
     
 ];
 
@@ -68,7 +66,8 @@ if (accepted) {
                                     ],
                                     availability: form[8].value,
                                     price: form[9].value,
-                                    description: form[10].value
+                                    description: form[10].value,
+                                    wearable: form[11].value
                                     }
                                 })
     });

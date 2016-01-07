@@ -12,7 +12,6 @@
 //
 
 (function() {
-    //we're at hifi\examples\vrShop\inspect\
     
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
@@ -44,14 +43,11 @@
     var inspectingMyItem = false;
     var inspectedEntityID = null;
     var isUIWorking = false;
-    var waitingForBumpReleased = false;
+    var wantToStopTrying = false;
     var rightController = null;     //rightController and leftController are two objects
     var leftController = null;
     var workingHand = null;
     var collidedItemID = null;
-    var itemDescriptionString = null;
-    var priceNumber = -1;
-    var availabilityNumber = -1;
     var avatarEntity = null;
     var tempTryEntity = null;
     var tryingOnAvatar = false;
@@ -60,11 +56,14 @@
     var mainPanel = null;
     var mirrorPanel = null;
     var buttons = [];
+    var tryOnAvatarButton = null;
+    var playButton = null;
+    var nextButton = null;
     var modelURLsArray = [];
     var previewURLsArray = [];
     
     
-    var pointer = new Image3DOverlay({          //maybe we want to use one pointer for each hand
+    var pointer = new Image3DOverlay({          //maybe we want to use one pointer for each hand ?
         url: POINTER_ICON_URL,
         dimensions: {
             x: 0.015,
@@ -86,7 +85,6 @@
     
 
     function MyController(hand) {
-        print("created hand: " + hand);
         this.hand = hand;
         if (this.hand === RIGHT_HAND) {
             this.getHandPosition = MyAvatar.getRightPalmPosition;
@@ -127,7 +125,6 @@
                direction: Quat.getUp(this.getHandRotation())
             };
             //update the ray overlay and the pointer
-            //var intersection = OverlayManager.renderPointer(this.pickRay);
             
             var rayPickResult = OverlayManager.findRayIntersection(this.pickRay);
             if (rayPickResult.intersects) {
@@ -146,8 +143,6 @@
         },
         //the update of each hand has to update the ray belonging to that hand and handle the bumper event
         this.updateHand = function() {
-            
-            
             //detect the bumper event
             var bumperPressed = Controller.getValue(this.bumper);
             if (bumperPressed && this != workingHand) {
@@ -169,8 +164,6 @@
                         if (buttons[i] == triggeredButton) {
                             
                             _this.changeModel(i);
-                            
-                            print("ChangeColor by ID: " + i);
                         }
                     }
                     
@@ -180,19 +173,15 @@
                             print(avatarEntity);
                             
                             var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
-                            
-                            Vec3.print("Old Dimensions: ", oldDimension);
-                            
                             var newDimension = Vec3.multiply(oldDimension, 0.15);
-                            Vec3.print("New Dimensions: ", newDimension);
                         
                             Entities.editEntity(avatarEntity, { dimensions: newDimension });
                             Entities.editEntity(avatarEntity, { visible: true });
                         }
                     }
                     
-                    if (nextButton == triggeredButton) {
-                        print("Next pressed!");
+                    if (tryOnAvatarButton == triggeredButton) {
+                        print("tryOnAvatar pressed!");
                         
                         var itemPositionWhileTrying = null;
                         switch (Entities.getEntityProperties(inspectedEntityID).name) {
@@ -203,19 +192,18 @@
                                 itemPositionWhileTrying = {x: 0, y: 0.16, z: 0.025};
                                 break;
                             default:
-                                //not an item that can be tried on - do nothing
-                                return;
+                                //there isn't any position specified for that item, use a default one
+                                itemPositionWhileTrying = {x: 0, y: 0.16, z: 0.025};
+                                break;
                         }
                         
                         //Code for the overlay text for the mirror.
-                        
-                        
                         mirrorPanel = new OverlayPanel({
                             anchorPositionBinding: { avatar: "MyAvatar" },
                             anchorRotationBinding: { avatar: "MyAvatar" },
                                 offsetPosition: {
                                 x: 0.5,
-                                y: 0.95,
+                                y: 0.9,
                                 z: 0
                             },
                             offsetRotation: Quat.fromVec3Degrees({x: 0, y: 180, z: 0}),
@@ -223,7 +211,7 @@
                             isFacingAvatar: false
                         });
                         var mirrorText = new Text3DOverlay({
-                            text: "Press any key to go back in inspection.",
+                            text: "Press the bumper to go back in inspection",
                             isFacingAvatar: false,
                             ignoreRayIntersection: true,
 
@@ -249,11 +237,11 @@
                         Entities.deleteEntity(avatarEntity);
                         avatarEntity = null;
                         mainPanel.destroy();
+                        mainPanel = null;
                         isUIWorking = false;
                         Entities.editEntity(inspectedEntityID, { visible: false });     //the inspected item becomes invisible
                         
                         
-                        //Camera.setModeString("mirror");
                         Camera.mode = "entity";
                         Camera.cameraEntity = _this.entityID;
                         var entityProperties = Entities.getEntityProperties(inspectedEntityID);
@@ -289,15 +277,22 @@
     function update(deltaTime) {
         
         if (tryingOnAvatar) {
-            // if trying the item on avatar, wait for a button pressed to exit this mode
-            if(Controller.getValue(Controller.Standard.RightPrimaryThumb || Controller.Standard.LeftPrimaryThumb)) {
-                //Camera.setModeString("first person");
+            // if trying the item on avatar, wait for a bumper being pressed to exit this mode
+            //the bumper is already pressed when we get here because we triggered the button pressing the bumper so we have to wait it's released
+            if(Controller.getValue(workingHand.bumper) && wantToStopTrying) {
+                Camera.cameraEntity = null;
                 Camera.mode = "first person";
                 mirrorPanel.destroy();
+                mirrorPanel = null;
                 Entities.deleteEntity(tempTryEntity);
+                tempTryEntity = null;
                 Entities.editEntity(inspectedEntityID, { visible: true });
                 _this.createInspectUI();
                 tryingOnAvatar = false;
+                wantToStopTrying = false;
+            } else if (!Controller.getValue(workingHand.bumper) && !wantToStopTrying) {
+                //no bumper is pressed
+                wantToStopTrying = true;
             }
             return;
         } else if (inspecting) {
@@ -352,7 +347,6 @@
             var inspectOwnerObj = getEntityCustomData('ownerKey', this.entityID, null);
             
             if (inspectOwnerObj == null) {
-                //print("The inspectZone doesn't have a owner.");
                 Entities.deleteEntity(data.id);
             }
             
@@ -363,37 +357,30 @@
                 setEntityCustomData('statusKey', data.id, {
                     status: IN_INSPECT_STATUS
                 });
-                //print("Set status!");
                 _this.createInspectUI();
                 itemOriginalDimensions = Entities.getEntityProperties(inspectedEntityID).dimensions;
-                
-                //Entities.editEntity(_this.entityID, { visible: true });
-                
             } else {
-                //print("Not your inspect zone!");
                 Entities.deleteEntity(data.id);
             }
         },
         
         positionRotationUpdate: function() {
-            //position
-            /*
-            newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius)); 
-            Entities.editEntity(_this.entityID, { position: newPosition });
-            
-            newRotation = Camera.getOrientation();
-            */
-            var newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(MyAvatar.orientation), inspectRadius)); 
-            Entities.editEntity(_this.entityID, { position: newPosition });
-            
             var newRotation;
             if (tryingOnAvatar) {
                 newRotation = Vec3.sum(Quat.safeEulerAngles(MyAvatar.orientation), {x:0, y: 180, z: 0});        //neccessary to set properly the camera in entity mode when trying on avatar
                 //Entities.editEntity(_this.entityID, { rotation: newRotation });
                 Entities.editEntity(_this.entityID, { rotation: Quat.fromVec3Degrees(newRotation) });
             } else {
+                
+                var newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(MyAvatar.orientation), inspectRadius)); 
+                Entities.editEntity(_this.entityID, { position: newPosition });
                 newRotation = MyAvatar.orientation;
                 Entities.editEntity(_this.entityID, { rotation: newRotation });
+                // if (mainPanel != null) {
+                    // //update the position of the inspecting UI
+                    // mainPanel.anchorPosition = Entities.getEntityProperties(_this.entityID).position;
+                // }
+                
             }
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
@@ -422,12 +409,18 @@
                 // ],
                 // description: descriptionValue,
                 // price: priceValue,
-                // availability: availabilityValue
+                // availability: availabilityValue,
+                // wearable: wearable
             // }
             
             var infoObj = getEntityCustomData('infoKey', inspectedEntityID, null);
             
             print("Info Obj is: " + infoObj);
+            
+            var itemDescriptionString = null;
+            var priceNumber = -1;
+            var availabilityNumber = -1;
+            var wearable = false;
             
             if(infoObj != null) {
                 //var modelURLsLoop = infoObj.modelURLs; ??
@@ -435,20 +428,24 @@
                 for (var i = 0; i < infoObj.modelURLs.length; i++) {
                     modelURLsArray[i] = rootURLString + infoObj.modelURLs[i];
                     previewURLsArray[i] = rootURLString + infoObj.previewURLs[i];
-                    print("----------------       " + modelURLsArray[i]);
                 }
                 
                 itemDescriptionString = infoObj.description;
                 priceNumber = infoObj.price;
                 availabilityNumber = infoObj.availability;
+                wearable = infoObj.wearable;
             }
             
             print ("Creating UI");
-            
             //set the main panel to follow the inspect entity
             mainPanel = new OverlayPanel({
                 anchorPositionBinding: { entity: _this.entityID },
                 anchorRotationBinding: { entity: _this.entityID },
+                //anchorPositionBinding: { avatar: "MyAvatar"},
+                //anchorRotationBinding: { avatar: "MyAvatar" },
+                
+                //anchorPosition: Entities.getEntityProperties(_this.entityID).position,
+                //offsetPosition: Vec3.subtract(Entities.getEntityProperties(_this.entityID).position, MyAvatar.position),
                 
                 isFacingAvatar: false
             });
@@ -477,7 +474,7 @@
                 mainPanel.addChild(buttons[i]);
             }
             
-            aggregateScore = new Image3DOverlay({
+            var aggregateScore = new Image3DOverlay({
                 url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png",
                 dimensions: {
                     x: 0.25,
@@ -577,6 +574,33 @@
             
             
             mainPanel.addChild(nextButton);
+            
+            if (wearable) {
+                tryOnAvatarButton = new Text3DOverlay({
+                    text: "Try On Avatar\n     (beta)",
+                    isFacingAvatar: false,
+                    alpha: 1.0,
+                    ignoreRayIntersection: false,
+                    offsetPosition: {
+                        x: 0.35,
+                        y: -0.22,
+                        z: 0
+                    },
+                    dimensions: { x: 0.2, y: 0.09 },
+                    backgroundColor: { red: 0, green: 0, blue: 0 },
+                    color: { red: 255, green: 255, blue: 255 },
+                    topMargin: 0.00625,
+                    leftMargin: 0.00625,
+                    bottomMargin: 0.1,
+                    rightMargin: 0.00625,
+                    lineHeight: 0.03,
+                    alpha: 1,
+                    backgroundAlpha: 0.3
+                });
+                
+                mainPanel.addChild(tryOnAvatarButton);
+            }
+            
             
             var textQuantityString = new Text3DOverlay({
                     text: "Quantity: ",

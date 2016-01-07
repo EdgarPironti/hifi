@@ -12,8 +12,6 @@
 //
 
 (function() {
-    //we're at hifi\examples\vrShop\item\
-    
     var utilitiesScript = Script.resolvePath("../../libraries/utils.js");
     var overlayManagerScript = Script.resolvePath("../../libraries/overlayManager.js");
     var inspectEntityScript = Script.resolvePath("../inspect/shopInspectEntityScript.js");
@@ -49,7 +47,7 @@
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
-    DetectGrabbed = function() { 
+    ItemEntity = function() { 
          _this = this;
     };
     
@@ -60,7 +58,7 @@
     };
     
 
-    DetectGrabbed.prototype = {
+    ItemEntity.prototype = {
 
         // preload() will be called when the entity has become visible (or known) to the interface
         // it gives us a chance to set our local JavaScript object up. In this case it means:
@@ -79,12 +77,10 @@
         },
         
         setRightHand: function () {
-            //print("I am being held in a right hand... entity:" + this.entityID);
             hand = MyAvatar.rightHandPose;
         },
         
         setLeftHand: function () {
-            //print("I am being held in a left hand... entity:" + this.entityID);
             hand = MyAvatar.leftHandPose;
         },
         
@@ -115,12 +111,9 @@
             });
             
             inspectPanel.addChild(background);
-            
-            //print ("Overlay created");
         },
         
         createCartOverlay: function (entityBindID) {
-            //print ("Creating overlay");
             cartPanel = new OverlayPanel({
                 anchorPositionBinding: { entity: entityBindID },
                 //anchorRotationBinding: { entity: entityBindID },
@@ -168,16 +161,10 @@
             if (overlayInspectRed) {
                 //print ("Change color of overlay to green");
                 overlayInspectRed = false;
-                //background.dimensions = Vec3.sum(background.dimension, { x: 1, y: 1, z: 1 });
-                // backgroundRED.visible = overlayInspectRed;
-                // backgroundGREEN.visible = !overlayInspectRed;
                 background.url = GREEN_IMAGE_URL;
             } else {
                 //print ("Change color of overlay to red");
                 overlayInspectRed = true;
-                //background.dimensions = Vec3.sum(background.dimension, { x: 1, y: 1, z: 1 });
-                // backgroundRED.visible = overlayInspectRed;
-                // backgroundGREEN.visible = !overlayInspectRed;
                 background.url = RED_IMAGE_URL;
             }
         },
@@ -189,13 +176,10 @@
             Entities.editEntity(_this.entityID, { dimensions: originalDimensions });
             
             // Everytime we grab, we create the inspectEntity and the inspectAreaOverlay in front of the avatar
-            
-        
             if(!inspecting) {
                 inspectingEntity = Entities.addEntity({
                     type: "Box",
                     name: "inspectionEntity",
-                    //position: Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), inspectRadius * 3.0)), // maybe we can avoid to set this here
                     dimensions: {x: 0.5, y: 0.5, z: 0.5},
                     collisionsWillMove: false,
                     ignoreForCollisions: false,
@@ -229,7 +213,6 @@
             } else if (onShelf === true) {
                 
                 // --- Create a copy of this entity if it is the first grab ---
-                
                 print("creating a copy of the grabbed dentity");
                 var entityProperties = Entities.getEntityProperties(_this.entityID);
                 
@@ -256,8 +239,6 @@
                     setEntityCustomData('infoKey', entityOnShelf, tempUserDataObj.infoKey);
                 }
                 
-                print("End of clone creation.");
-                
                 setEntityCustomData('statusKey', _this.entityID, {
                     status: "inHand"
                 });
@@ -267,8 +248,6 @@
                     ownerID: MyAvatar.sessionUUID
                 });
                 originalDimensions = entityProperties.dimensions;
-                
-                print("Status and ownerID set.");
 
             } else if (inCart === true) {
                 print("GOT IN inCart BRANCH");
@@ -280,13 +259,11 @@
                     id: _this.entityID
                 };
                 var dataArray = [JSON.stringify(dataJSON)];
-                print("Going to refresh!");
                 Entities.callEntityMethod(zoneID, 'refreshCartContent', dataArray);
             }
         },
         
         continueNearGrab: function () {
-            //print("I am still being grabbed... entity:" + this.entityID);
         },
 
         releaseGrab: function () {
@@ -298,11 +275,11 @@
             // Destroy overlay
             inspectPanel.destroy();
             cartPanel.destroy();
+            inspectPanel = cartPanel = null;
             
             if (zoneID !== null) {
                 
                 print("Got here. Entity ID is: " + _this.entityID);
-                //Entities.callEntityMethod(zoneID, 'doSomething', this.entityID);
                 var dataJSON = {
                     id: _this.entityID
                 };
@@ -310,8 +287,6 @@
                 Entities.callEntityMethod(zoneID, 'doSomething', dataArray);
                 
                 var statusObj = getEntityCustomData('statusKey', _this.entityID, null);
-                
-                //print("ZONE ID NOT NULL AND STATUS IS: " + statusObj.status);
                 
                 if (statusObj.status == "inInspect") { // if I'm releasing in the inspectZone
                     inspecting = true;
@@ -354,16 +329,12 @@
                 Entities.deleteEntity(inspectingEntity);
                 inspectingEntity = null;
                 Entities.deleteEntity(this.entityID);
-                inspectingEntity = null;
             }
         
         },
 
         collisionWithEntity: function(myID, otherID, collisionInfo) {
-            //print("SHOE COLLISION: " + collisionInfo.penetration.x + " - " + collisionInfo.penetration.y + " - " + collisionInfo.penetration.z);
-            //var penetrationValue = collisionInfo.penetration.x + collisionInfo.penetration.y + collisionInfo.penetration.z;
             var penetrationValue = Vec3.length(collisionInfo.penetration);
-            //print("Value: " +  penetrationValue);
             if (penetrationValue > PENETRATION_THRESHOLD && zoneID === null) {
                 zoneID = otherID;
                 print("Item IN: " + Entities.getEntityProperties(zoneID).name);
@@ -375,11 +346,6 @@
         
         orientationPositionUpdate: function() {
             //position
-            //var radius = Vec3.length(Entities.getEntityProperties(this.entityID).dimensions) / 2.0;
-            //newPosition = Vec3.sum(MyAvatar.getHeadPosition(), Vec3.multiply(Quat.getFront(MyAvatar.orientation), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
-            /*
-            newPosition = Vec3.sum(Camera.position, Vec3.multiply(Quat.getFront(Camera.getOrientation()), radius * 3.0)); // we need to tune this because we don't want it in the center but on the left
-            */
             var inspectingEntityPosition = Entities.getEntityProperties(inspectingEntity).position;      //at this time inspectingEntity is a valid entity
             var inspectingEntityRotation = Entities.getEntityProperties(inspectingEntity).rotation;
             newPosition = Vec3.sum(inspectingEntityPosition, Vec3.multiply(Quat.getFront(inspectingEntityRotation), -0.2));   //put the item near to the face of the user
@@ -402,5 +368,5 @@
     };
 
     // entity scripts always need to return a newly constructed object of our type
-    return new DetectGrabbed();
+    return new ItemEntity();
 })

@@ -62,7 +62,6 @@
             print("entering in the spawn cart area");
             
             if (!isScriptRunning(SHOP_GRAB_SCRIPT_URL)) {
-                print("Loading grab script");
                 Script.load(SHOP_GRAB_SCRIPT_URL);
             }
             
