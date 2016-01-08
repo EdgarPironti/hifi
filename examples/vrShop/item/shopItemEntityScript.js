@@ -25,6 +25,7 @@
     var MAX_DIMENSION_THRESHOLD = null;
     var PENETRATION_THRESHOLD = 0.2;
     var MAPPING_NAME = "controllerMapping_Inspection";
+    var SHOPPING_CART_NAME = "Shopping cart";
 
     var _this;
     var hand;
@@ -44,6 +45,7 @@
     var inspectPanel = null;
     var background = null;
     var textCart = null;
+    var cartID = null;
     
     // this is the "constructor" for the entity as a JS object we don't do much here, but we do want to remember
     // our this object, so we can access it in cases where we're called without a this (like in the case of various global signals)
@@ -172,45 +174,23 @@
         startNearGrab: function () {
             
             print("I was just grabbed... entity:" + _this.entityID);
-            Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
-            Entities.editEntity(_this.entityID, { dimensions: originalDimensions });
+            //we have to distinguish if the user who is grabbing has a cart or not
+            //if he does it is a buyer, otherwise he probably want to do a review
             
-            // Everytime we grab, we create the inspectEntity and the inspectAreaOverlay in front of the avatar
-            if(!inspecting) {
-                inspectingEntity = Entities.addEntity({
-                    type: "Box",
-                    name: "inspectionEntity",
-                    dimensions: {x: 0.5, y: 0.5, z: 0.5},
-                    collisionsWillMove: false,
-                    ignoreForCollisions: false,
-                    visible: false,
-                    script: inspectEntityScript,
-                    userData: JSON.stringify({
-                        ownerKey: {
-                            ownerID: MyAvatar.sessionUUID
-                        },
-                        itemKey: {
-                            itemID: _this.entityID
-                        },
-                        grabbableKey: {
-                            grabbable: false
+            var thisItemPosition = Entities.getEntityProperties(_this.entityID).position;
+            
+            if (onShelf === true) {
+                
+                var foundEntities = Entities.findEntities(thisItemPosition, 5);
+                foundEntities.forEach( function (foundEntityID) {
+                    var entityName = Entities.getEntityProperties(foundEntityID).name;
+                    if (entityName == SHOPPING_CART_NAME) {
+                        var cartOwnerID = getEntityCustomData('ownerKey', foundEntityID, null).ownerID;
+                        if (cartOwnerID == MyAvatar.sessionUUID) {
+                            cartID = foundEntityID;
                         }
-                    })
+                    }
                 });
-            }
-            
-            _this.createInspectOverlay(inspectingEntity);
-            _this.createCartOverlay(_this.entityID);
-            print("Got after the creation!");
-            
-            if (inspecting === true) {
-                inspecting = false;
-                //deletentityforinspecting
-                Controller.disableMapping(MAPPING_NAME);
-                setEntityCustomData('statusKey', _this.entityID, {
-                    status: "inHand"
-                });
-            } else if (onShelf === true) {
                 
                 // --- Create a copy of this entity if it is the first grab ---
                 print("creating a copy of the grabbed dentity");
@@ -219,7 +199,7 @@
                 var entityOnShelf = Entities.addEntity({
                     type: entityProperties.type,
                     name: entityProperties.name,
-                    position: entityProperties.position,
+                    position: thisItemPosition,
                     dimensions: entityProperties.dimensions,
                     rotation: entityProperties.rotation,
                     collisionsWillMove: false,
@@ -234,7 +214,7 @@
                 var tempUserDataObj = JSON.parse(entityProperties.userData);
                 var availabilityNumber = tempUserDataObj.infoKey.availability;
                 
-                if (availabilityNumber > 0) {
+                if (availabilityNumber > 0 && cartID) {
                     tempUserDataObj.infoKey.availability  = tempUserDataObj.infoKey.availability - 1;
                     setEntityCustomData('infoKey', entityOnShelf, tempUserDataObj.infoKey);
                 }
@@ -249,18 +229,65 @@
                 });
                 originalDimensions = entityProperties.dimensions;
 
-            } else if (inCart === true) {
-                print("GOT IN inCart BRANCH");
-                inCart = false;
-                setEntityCustomData('statusKey', _this.entityID, {
-                    status: "inHand"
-                });
-                var dataJSON = {
-                    id: _this.entityID
-                };
-                var dataArray = [JSON.stringify(dataJSON)];
-                Entities.callEntityMethod(zoneID, 'refreshCartContent', dataArray);
             }
+            if (cartID != null) {
+                //the user is a buyer
+                // Everytime we grab, we create the inspectEntity and the inspectAreaOverlay in front of the avatar
+                if(!inspecting) {
+                    inspectingEntity = Entities.addEntity({
+                        type: "Box",
+                        name: "inspectionEntity",
+                        dimensions: {x: 0.5, y: 0.5, z: 0.5},
+                        collisionsWillMove: false,
+                        ignoreForCollisions: false,
+                        visible: false,
+                        script: inspectEntityScript,
+                        userData: JSON.stringify({
+                            ownerKey: {
+                                ownerID: MyAvatar.sessionUUID
+                            },
+                            itemKey: {
+                                itemID: _this.entityID
+                            },
+                            grabbableKey: {
+                                grabbable: false
+                            }
+                        })
+                    });
+                }
+                
+                _this.createInspectOverlay(inspectingEntity);
+                _this.createCartOverlay(_this.entityID);
+                print("Got after the creation!");
+                
+                if (inspecting === true) {
+                    inspecting = false;
+                    
+                    Entities.editEntity(_this.entityID, { dimensions: originalDimensions });
+                    //deletentityforinspecting
+                    Controller.disableMapping(MAPPING_NAME);
+                    setEntityCustomData('statusKey', _this.entityID, {
+                        status: "inHand"
+                    });
+                } else if (inCart === true) {
+                    print("GOT IN inCart BRANCH");
+                    inCart = false;
+                    Entities.editEntity(_this.entityID, { dimensions: originalDimensions });
+                    setEntityCustomData('statusKey', _this.entityID, {
+                        status: "inHand"
+                    });
+                    var dataJSON = {
+                        id: _this.entityID
+                    };
+                    var dataArray = [JSON.stringify(dataJSON)];
+                    Entities.callEntityMethod(zoneID, 'refreshCartContent', dataArray);
+                }
+            }
+            
+            
+            Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
+            
+            
         },
         
         continueNearGrab: function () {
@@ -269,9 +296,13 @@
         releaseGrab: function () {
             
             print("I was released... entity:" + _this.entityID);
-            Entities.editEntity(_this.entityID, { ignoreForCollisions: true });
-            print("zone is " + Entities.getEntityProperties(zoneID).name);
             
+            if (cartID == null) {
+                //Entities.deleteEntity(this.entityID);
+                return;
+            }
+            
+            Entities.editEntity(_this.entityID, { ignoreForCollisions: true });
             // Destroy overlay
             inspectPanel.destroy();
             cartPanel.destroy();
@@ -321,11 +352,13 @@
                     print("inCart is TRUE");
                     inCart = true;
                 } else { // any other zone
+                    print("------------zoneID is something");
                     Entities.deleteEntity(inspectingEntity);
                     inspectingEntity = null;
                 }
                 
             } else { // ZoneID is null, released somewhere that is not a zone.
+            print("------------zoneID is null");
                 Entities.deleteEntity(inspectingEntity);
                 inspectingEntity = null;
                 Entities.deleteEntity(this.entityID);
