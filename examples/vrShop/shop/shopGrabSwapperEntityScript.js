@@ -53,7 +53,7 @@
         leaveEntity: function (entityID) {
             print("leaving the shop area");
             Messages.sendMessage(SHOP_GRAB_CHANNEL, null);      //signal to shopItemGrab that it has to kill itself
-        },
+        }
 
     }
 
