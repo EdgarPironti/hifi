@@ -18,6 +18,13 @@
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
     
+    var AGENT_REVIEW_CHANNEL = "reviewChannel";
+    
+    var ZERO_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/0Star.png";
+    var ONE_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png";
+    var TWO_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png";
+    var THREE_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/3Star.png";
+    
     var POINTER_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png";
     
     var MIN_DIMENSION_THRESHOLD = null;
@@ -48,7 +55,6 @@
     var leftController = null;
     var workingHand = null;
     var collidedItemID = null;
-    var avatarEntity = null;
     var tempTryEntity = null;
     var tryingOnAvatar = false;
     var itemOriginalDimensions = null;
@@ -59,8 +65,13 @@
     var tryOnAvatarButton = null;
     var playButton = null;
     var nextButton = null;
+    var textReviewerName = null;
     var modelURLsArray = [];
     var previewURLsArray = [];
+    var starURL = null;
+    
+    var reviewIndex = 0;
+    var dbMatrix = null;
     
     
     var pointer = new Image3DOverlay({          //maybe we want to use one pointer for each hand ?
@@ -167,17 +178,29 @@
                         }
                     }
                     
-                    if (playButton == triggeredButton) {
-                        if(avatarEntity != null) {
-                            print("Play pressed!");
-                            print(avatarEntity);
-                            
-                            var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
-                            var newDimension = Vec3.multiply(oldDimension, 0.15);
+                    if (nextButton == triggeredButton) {
+                        reviewIndex ++;
                         
-                            Entities.editEntity(avatarEntity, { dimensions: newDimension });
-                            Entities.editEntity(avatarEntity, { visible: true });
-                        }
+                        var message = {
+                            command: "Show",
+                            clip_url: dbMatrix[reviewIndex].clip_url
+                        };
+                        
+                        Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
+                        
+                        // update UI
+                        textReviewerName.text = dbMatrix[reviewIndex].name;
+                        reviewerScore.url = starConverter(dbMatrix[reviewIndex].score);
+                        
+                    }
+                    
+                    if (playButton == triggeredButton) {
+                         var message = {
+                            command: "Play",
+                            clip_url: dbMatrix[reviewIndex].clip_url
+                        };
+                        
+                        Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
                     }
                     
                     if (tryOnAvatarButton == triggeredButton) {
@@ -234,8 +257,6 @@
                         
                         //Clean inspect Overlays and related stuff
                         workingHand.clean();
-                        Entities.deleteEntity(avatarEntity);
-                        avatarEntity = null;
                         mainPanel.destroy();
                         mainPanel = null;
                         isUIWorking = false;
@@ -313,14 +334,40 @@
             workingHand.clean();
             
             // Destroy overlay
-            Entities.deleteEntity(avatarEntity);
-            avatarEntity = null;
             mainPanel.destroy();
             isUIWorking = false;
         }
         
         _this.positionRotationUpdate();
     };
+    
+    function starConverter(value) {
+        var starURL = ZERO_STAR_URL;
+        
+        switch(value) {
+            case 0:
+                starURL = ZERO_STAR_URL;
+                break;
+                
+            case 1:
+                starURL = ONE_STAR_URL;
+                break;
+                
+            case 2:
+                starURL = TWO_STAR_URL;
+                break;
+                
+            case 3:
+                starURL = THREE_STAR_URL;
+                break;
+                
+            default:
+                starURL = ZERO_STAR_URL;
+                break;
+        }
+                
+        return starURL;
+    }
 
     InspectEntity.prototype = {
         
@@ -385,10 +432,6 @@
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
 
-            if(avatarEntity != null) {
-                Entities.editEntity(avatarEntity, { position: newPosition});
-                Entities.editEntity(avatarEntity, { rotation: newRotation });
-            }
         },
         
         createInspectUI : function() {
@@ -415,7 +458,7 @@
             
             var infoObj = getEntityCustomData('infoKey', inspectedEntityID, null);
             
-            print("Info Obj is: " + infoObj);
+            //print("Info Obj is: " + infoObj);
             
             var itemDescriptionString = null;
             var priceNumber = -1;
@@ -434,6 +477,32 @@
                 priceNumber = infoObj.price;
                 availabilityNumber = infoObj.availability;
                 wearable = infoObj.wearable;
+                infoObj = null;
+            }
+            
+            // Retreiving info from the item DB
+            
+            var inspectedEntityDB = Entities.getEntityProperties(inspectedEntityID).name + "DB";
+            infoObj = getEntityCustomData('infoKey', inspectedEntityDB, null);
+            var scoreAverage = null;
+            //print("Info Obj is: " + infoObj);
+            
+            if(infoObj != null) {
+                dbMatrix = infoObj.dbKey;
+                var scoreSum = null;
+                
+                for (var i = 0; i < dbMatrix.length; i++) {
+                    scoreSum += dbMatrix[i].score;
+                }
+                
+                scoreAverage = Math.round(scoreSum / dbMatrix.length);
+                
+                 var message = {
+                    command: "Show",
+                    clip_url: dbMatrix[reviewIndex].clip_url
+                };
+                
+                Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
             }
             
             print ("Creating UI");
@@ -475,7 +544,7 @@
             }
             
             var aggregateScore = new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png",
+                url: starConverter(scoreAverage),
                 dimensions: {
                     x: 0.25,
                     y: 0.25
@@ -512,8 +581,8 @@
             
             mainPanel.addChild(playButton);
             
-            var textReviewerName = new Text3DOverlay({
-                    text: "Customer zero",
+            textReviewerName = new Text3DOverlay({
+                    text: dbMatrix[reviewIndex].name,
                     isFacingAvatar: false,
                     alpha: 1.0,
                     ignoreRayIntersection: true,
@@ -537,7 +606,7 @@
             mainPanel.addChild(textReviewerName);
             
             reviewerScore = new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png",
+                url: starConverter(dbMatrix[reviewIndex].score),
                 dimensions: {
                     x: 0.15,
                     y: 0.15
@@ -679,17 +748,6 @@
         
             
             print ("GOT HERE: Descrition " + itemDescriptionString + " Availability " + availabilityNumber);
-            
-            // FIXME: remove this from here, is just for demo
-            // Here we have to trigger the playback
-            avatarEntity = Entities.addEntity({
-                type: "Model",
-                name: "reviewerAvatar",
-                collisionsWillMove: false,
-                ignoreForCollisions: true,
-                visible: false,
-                modelURL: "https://hifi-content.s3.amazonaws.com/ozan/dev/3d_marketplace/avatars/sintel/sintel_mesh.fbx"
-            });
             
             isUIWorking = true;
         },

@@ -71,4 +71,22 @@ if (accepted) {
                                     }
                                 })
     });
+    
+    var myEntityDB = Entities.addEntity({
+        type: "Box",
+        name: form[0].value + "DB",
+        position: {x: 0, y: 0, z: 0},
+        rotation: rotation,
+        collisionsWillMove: false,
+        ignoreForCollisions: true,
+        visible: false,
+        shapeType: "box",
+        userData: JSON.stringify({
+                                infoKey: {
+                                        dbKey: [
+                                            //{name: default, score: 0, clip_url: atp:example}
+                                        ]
+                                    }
+                                })
+    });
 }
