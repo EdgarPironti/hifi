@@ -81,15 +81,16 @@
                         // ]
                     // }
                 // })
-                        
-                var dbObj = getEntityCustomData('infoKey', dataBaseID, null);
-                var reviewsNumber = 0;
-                if(dbObj != null) {
-                    reviewsNumber = dbObj.dbKey.length;
-                    dbObj.dbKey[reviewsNumber] = {name: MyAvatar.Name, score: score, clip_url: url};
-                }
                 
-                setEntityCustomData('infoKey', dataBaseID, dbObj.dbKey);
+                // Feed the database
+                
+                // var dbObj = getEntityCustomData('infoKey', dataBaseID, null);
+                // var reviewsNumber = 0;
+                // if(dbObj != null) {
+                    // reviewsNumber = dbObj.dbKey.length;
+                    // dbObj.dbKey[reviewsNumber] = {name: MyAvatar.Name, score: score, clip_url: url};
+                    // setEntityCustomData('infoKey', dataBaseID, dbObj.dbKey);
+                // }
             }
         },
 
