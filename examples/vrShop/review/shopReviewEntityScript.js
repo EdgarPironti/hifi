@@ -318,6 +318,7 @@
             findItemToReview(entityID); //assign itemToReview
             if (itemToReview != null) {
                 findItemDataBase(entityID);
+<<<<<<< HEAD
                 if (dataBaseID) {
                     findAnchorEntityForUI(entityID);
                     if (anchorEntityForUI) {
@@ -330,6 +331,28 @@
                         print("update connected");
                     }
                 }
+=======
+                
+                
+                
+                // userData: JSON.stringify({
+                // infoKey: {
+                        // dbKey: [
+                            // //{name: default, score: 0, clip_url: atp:example}
+                        // ]
+                    // }
+                // })
+                
+                // Feed the database
+                
+                // var dbObj = getEntityCustomData('infoKey', dataBaseID, null);
+                // var reviewsNumber = 0;
+                // if(dbObj != null) {
+                    // reviewsNumber = dbObj.dbKey.length;
+                    // dbObj.dbKey[reviewsNumber] = {name: MyAvatar.Name, score: score, clip_url: url};
+                    // setEntityCustomData('infoKey', dataBaseID, dbObj.dbKey);
+                // }
+>>>>>>> a9911a9819a85a5659acbc64c2de143f59dfb5d7
             }
         },
 

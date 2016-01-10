@@ -18,6 +18,13 @@
     Script.include(utilitiesScript);
     Script.include(overlayManagerScript);
     
+    var AGENT_REVIEW_CHANNEL = "reviewChannel";
+    
+    var ZERO_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/0Star.png";
+    var ONE_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png";
+    var TWO_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png";
+    var THREE_STAR_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/3Star.png";
+    
     var POINTER_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png";
     
     var MIN_DIMENSION_THRESHOLD = null;
@@ -48,7 +55,6 @@
     var leftController = null;
     var workingHand = null;
     var collidedItemID = null;
-    var avatarEntity = null;
     var tempTryEntity = null;
     var tryingOnAvatar = false;
     var itemOriginalDimensions = null;
@@ -59,8 +65,14 @@
     var tryOnAvatarButton = null;
     var playButton = null;
     var nextButton = null;
+    var textReviewerName = null;
     var modelURLsArray = [];
     var previewURLsArray = [];
+    var starURL = null;
+    
+    var reviewIndex = 0;
+    var reviewsNumber = 0;
+    var dbMatrix = null;
     
     
     var pointer = new Image3DOverlay({          //maybe we want to use one pointer for each hand ?
@@ -167,17 +179,36 @@
                         }
                     }
                     
-                    if (playButton == triggeredButton) {
-                        if(avatarEntity != null) {
-                            print("Play pressed!");
-                            print(avatarEntity);
-                            
-                            var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
-                            var newDimension = Vec3.multiply(oldDimension, 0.15);
+                    if (nextButton == triggeredButton) {
                         
-                            Entities.editEntity(avatarEntity, { dimensions: newDimension });
-                            Entities.editEntity(avatarEntity, { visible: true });
+                        reviewIndex ++;
+                        
+                        if (reviewIndex == reviewsNumber) {
+                            reviewIndex = 0;
                         }
+                        
+                        var message = {
+                            command: "Show",
+                            clip_url: dbMatrix[reviewIndex].clip_url
+                        };
+                        
+                        Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
+                        print("Show sent to agent");
+                        
+                        // update UI
+                        textReviewerName.text = dbMatrix[reviewIndex].name;
+                        reviewerScore.url = starConverter(dbMatrix[reviewIndex].score);
+                        print("UI updated");
+                    }
+                    
+                    if (playButton == triggeredButton) {
+                         var message = {
+                            command: "Play",
+                            clip_url: dbMatrix[reviewIndex].clip_url
+                        };
+                        
+                        Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
+                        print("Play sent to agent");
                     }
                     
                     if (tryOnAvatarButton == triggeredButton) {
@@ -234,8 +265,6 @@
                         
                         //Clean inspect Overlays and related stuff
                         workingHand.clean();
-                        Entities.deleteEntity(avatarEntity);
-                        avatarEntity = null;
                         mainPanel.destroy();
                         mainPanel = null;
                         isUIWorking = false;
@@ -313,13 +342,63 @@
             workingHand.clean();
             
             // Destroy overlay
-            Entities.deleteEntity(avatarEntity);
-            avatarEntity = null;
             mainPanel.destroy();
             isUIWorking = false;
         }
         
         _this.positionRotationUpdate();
+    };
+    
+    function starConverter(value) {
+        var starURL = ZERO_STAR_URL;
+        
+        switch(value) {
+            case 0:
+                starURL = ZERO_STAR_URL;
+                break;
+                
+            case 1:
+                starURL = ONE_STAR_URL;
+                break;
+                
+            case 2:
+                starURL = TWO_STAR_URL;
+                break;
+                
+            case 3:
+                starURL = THREE_STAR_URL;
+                break;
+                
+            default:
+                starURL = ZERO_STAR_URL;
+                break;
+        }
+                
+        return starURL;
+    };
+    
+    function findItemDataBase(entityID, item) {
+        var dataBaseID = null;
+        // find the database entity
+        var databaseEntityName = item + "DB";
+        print("Database relative to the item: " + databaseEntityName);
+        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(entityID).position, (Entities.getEntityProperties(entityID).dimensions.x)*100); 
+        
+        for (var i = 0; i < entitiesInZone.length && dataBaseID == null; i++) {
+            if (Entities.getEntityProperties(entitiesInZone[i]).name == databaseEntityName) {
+                dataBaseID = entitiesInZone[i];
+                print("Database found! " + entitiesInZone[i]);
+                return dataBaseID;
+            } else {
+                print("No database for this item.");
+            }
+        }
+        
+        return null;
+        
+        // Or get the database entity ID if we manage to store it in the userData of the item.
+        // var DBObj = getEntityCustomData('DBKey', Entities.getEntityProperties(e).id, null);
+        // if (DBObj != null) { dataBaseID = DBObj.DBID }
     };
 
     InspectEntity.prototype = {
@@ -385,10 +464,6 @@
 
             newPosition = Vec3.sum(newPosition, Vec3.multiply(Quat.getRight(newRotation), 0.34));
 
-            if(avatarEntity != null) {
-                Entities.editEntity(avatarEntity, { position: newPosition});
-                Entities.editEntity(avatarEntity, { rotation: newRotation });
-            }
         },
         
         createInspectUI : function() {
@@ -413,9 +488,11 @@
                 // wearable: wearable
             // }
             
+            print("Got here! Before Info");
+            
             var infoObj = getEntityCustomData('infoKey', inspectedEntityID, null);
             
-            print("Info Obj is: " + infoObj);
+            //print("Info Obj is: " + infoObj);
             
             var itemDescriptionString = null;
             var priceNumber = -1;
@@ -434,264 +511,286 @@
                 priceNumber = infoObj.price;
                 availabilityNumber = infoObj.availability;
                 wearable = infoObj.wearable;
+                infoObj = null;
             }
             
-            print ("Creating UI");
-            //set the main panel to follow the inspect entity
-            mainPanel = new OverlayPanel({
-                anchorPositionBinding: { entity: _this.entityID },
-                anchorRotationBinding: { entity: _this.entityID },
-                //anchorPositionBinding: { avatar: "MyAvatar"},
-                //anchorRotationBinding: { avatar: "MyAvatar" },
-                
-                //anchorPosition: Entities.getEntityProperties(_this.entityID).position,
-                //offsetPosition: Vec3.subtract(Entities.getEntityProperties(_this.entityID).position, MyAvatar.position),
-                
-                isFacingAvatar: false
-            });
+            // Retreiving info from the item DB
+            print("Got here! Before DB - " + Entities.getEntityProperties(inspectedEntityID).name);
+            var DBID = findItemDataBase(_this.entityID, Entities.getEntityProperties(inspectedEntityID).name);
             
-            var offsetPositionY = 0.2;
-            var offsetPositionX = -0.4;
-            
-            for (var i = 0; i < previewURLsArray.length; i++) {
-                buttons[i] = new Image3DOverlay({
-                    url: previewURLsArray[i],
+            if (DBID != null) {
+                print("The Id of the DB is: " + DBID);
+                infoObj = getEntityCustomData('infoKey', DBID, null);
+                var scoreAverage = null;
+                print("Info Obj is: " + infoObj);
+                
+                if(infoObj != null) {
+                    dbMatrix = infoObj.dbKey;
+                    reviewsNumber = infoObj.dbKey.length;
+                    print("DB matrix is " + dbMatrix + " with element number: " + reviewsNumber);
+                    var scoreSum = null;
+                    
+                    for (var i = 0; i < dbMatrix.length; i++) {
+                        scoreSum += dbMatrix[i].score;
+                    }
+                    
+                    scoreAverage = Math.round(scoreSum / dbMatrix.length);
+                    
+                     var message = {
+                        command: "Show",
+                        clip_url: dbMatrix[reviewIndex].clip_url
+                    };
+                    
+                    Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
+                    print("Show sent to agent");
+                }
+                
+                print ("Creating UI");
+                //set the main panel to follow the inspect entity
+                mainPanel = new OverlayPanel({
+                    anchorPositionBinding: { entity: _this.entityID },
+                    anchorRotationBinding: { entity: _this.entityID },
+                    //anchorPositionBinding: { avatar: "MyAvatar"},
+                    //anchorRotationBinding: { avatar: "MyAvatar" },
+                    
+                    //anchorPosition: Entities.getEntityProperties(_this.entityID).position,
+                    //offsetPosition: Vec3.subtract(Entities.getEntityProperties(_this.entityID).position, MyAvatar.position),
+                    
+                    isFacingAvatar: false
+                });
+                
+                var offsetPositionY = 0.2;
+                var offsetPositionX = -0.4;
+                
+                for (var i = 0; i < previewURLsArray.length; i++) {
+                    buttons[i] = new Image3DOverlay({
+                        url: previewURLsArray[i],
+                        dimensions: {
+                            x: 0.15,
+                            y: 0.15
+                        },
+                        isFacingAvatar: false,
+                        alpha: 0.8,
+                        ignoreRayIntersection: false,
+                        offsetPosition: {
+                            x: offsetPositionX,
+                            y: offsetPositionY - (i * offsetPositionY),
+                            z: 0
+                        },
+                        emissive: true,
+                    });
+                    
+                    mainPanel.addChild(buttons[i]);
+                }
+                
+                var aggregateScore = new Image3DOverlay({
+                    url: starConverter(scoreAverage),
                     dimensions: {
-                        x: 0.15,
-                        y: 0.15
+                        x: 0.25,
+                        y: 0.25
                     },
                     isFacingAvatar: false,
-                    alpha: 0.8,
-                    ignoreRayIntersection: false,
+                    alpha: 1,
+                    ignoreRayIntersection: true,
                     offsetPosition: {
-                        x: offsetPositionX,
-                        y: offsetPositionY - (i * offsetPositionY),
+                        x: 0,
+                        y: 0.27,
                         z: 0
                     },
                     emissive: true,
                 });
                 
-                mainPanel.addChild(buttons[i]);
-            }
-            
-            var aggregateScore = new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png",
-                dimensions: {
-                    x: 0.25,
-                    y: 0.25
-                },
-                isFacingAvatar: false,
-                alpha: 1,
-                ignoreRayIntersection: true,
-                offsetPosition: {
-                    x: 0,
-                    y: 0.27,
-                    z: 0
-                },
-                emissive: true,
-            });
-            
-            mainPanel.addChild(aggregateScore);
-            
-            playButton = new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Play.png",
-                dimensions: {
-                    x: 0.08,
-                    y: 0.08
-                },
-                isFacingAvatar: false,
-                alpha: 1,
-                ignoreRayIntersection: false,
-                offsetPosition: {
-                    x: 0.42,
-                    y: 0.27,
-                    z: 0
-                },
-                emissive: true,
-            });
-            
-            mainPanel.addChild(playButton);
-            
-            var textReviewerName = new Text3DOverlay({
-                    text: "Customer zero",
-                    isFacingAvatar: false,
-                    alpha: 1.0,
-                    ignoreRayIntersection: true,
-                    offsetPosition: {
-                        x: 0.23,
-                        y: 0.31,
-                        z: 0
-                    },
-                    dimensions: { x: 0, y: 0 },
-                    backgroundColor: { red: 255, green: 255, blue: 255 },
-                    color: { red: 0, green: 0, blue: 0 },
-                    topMargin: 0.00625,
-                    leftMargin: 0.00625,
-                    bottomMargin: 0.1,
-                    rightMargin: 0.00625,
-                    lineHeight: 0.02,
-                    alpha: 1,
-                    backgroundAlpha: 0.3
-                });
+                mainPanel.addChild(aggregateScore);
                 
-            mainPanel.addChild(textReviewerName);
-            
-            reviewerScore = new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png",
-                dimensions: {
-                    x: 0.15,
-                    y: 0.15
-                },
-                isFacingAvatar: false,
-                alpha: 1,
-                ignoreRayIntersection: true,
-                offsetPosition: {
-                    x: 0.31,
-                    y: 0.26,
-                    z: 0
-                },
-                emissive: true,
-            });
-            
-            mainPanel.addChild(reviewerScore);
-            
-            nextButton = new Image3DOverlay({
-                url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Next.png",
-                dimensions: {
-                    x: 0.2,
-                    y: 0.2
-                },
-                isFacingAvatar: false,
-                alpha: 1,
-                ignoreRayIntersection: false,
-                offsetPosition: {
-                    x: 0.36,
-                    y: 0.18,
-                    z: 0
-                },
-                emissive: true,
-            });
-            
-            
-            mainPanel.addChild(nextButton);
-            
-            if (wearable) {
-                tryOnAvatarButton = new Text3DOverlay({
-                    text: "Try On Avatar\n     (beta)",
+                playButton = new Image3DOverlay({
+                    url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Play.png",
+                    dimensions: {
+                        x: 0.08,
+                        y: 0.08
+                    },
                     isFacingAvatar: false,
-                    alpha: 1.0,
+                    alpha: 1,
                     ignoreRayIntersection: false,
                     offsetPosition: {
-                        x: 0.35,
-                        y: -0.22,
+                        x: 0.42,
+                        y: 0.27,
                         z: 0
                     },
-                    dimensions: { x: 0.2, y: 0.09 },
-                    backgroundColor: { red: 0, green: 0, blue: 0 },
-                    color: { red: 255, green: 255, blue: 255 },
-                    topMargin: 0.00625,
-                    leftMargin: 0.00625,
-                    bottomMargin: 0.1,
-                    rightMargin: 0.00625,
-                    lineHeight: 0.03,
-                    alpha: 1,
-                    backgroundAlpha: 0.3
+                    emissive: true,
                 });
                 
-                mainPanel.addChild(tryOnAvatarButton);
+                mainPanel.addChild(playButton);
+                
+                textReviewerName = new Text3DOverlay({
+                        text: dbMatrix[reviewIndex].name,
+                        isFacingAvatar: false,
+                        alpha: 1.0,
+                        ignoreRayIntersection: true,
+                        offsetPosition: {
+                            x: 0.23,
+                            y: 0.31,
+                            z: 0
+                        },
+                        dimensions: { x: 0, y: 0 },
+                        backgroundColor: { red: 255, green: 255, blue: 255 },
+                        color: { red: 0, green: 0, blue: 0 },
+                        topMargin: 0.00625,
+                        leftMargin: 0.00625,
+                        bottomMargin: 0.1,
+                        rightMargin: 0.00625,
+                        lineHeight: 0.02,
+                        alpha: 1,
+                        backgroundAlpha: 0.3
+                    });
+                    
+                mainPanel.addChild(textReviewerName);
+                
+                reviewerScore = new Image3DOverlay({
+                    url: starConverter(dbMatrix[reviewIndex].score),
+                    dimensions: {
+                        x: 0.15,
+                        y: 0.15
+                    },
+                    isFacingAvatar: false,
+                    alpha: 1,
+                    ignoreRayIntersection: true,
+                    offsetPosition: {
+                        x: 0.31,
+                        y: 0.26,
+                        z: 0
+                    },
+                    emissive: true,
+                });
+                
+                mainPanel.addChild(reviewerScore);
+                
+                nextButton = new Image3DOverlay({
+                    url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Next.png",
+                    dimensions: {
+                        x: 0.2,
+                        y: 0.2
+                    },
+                    isFacingAvatar: false,
+                    alpha: 1,
+                    ignoreRayIntersection: false,
+                    offsetPosition: {
+                        x: 0.36,
+                        y: 0.18,
+                        z: 0
+                    },
+                    emissive: true,
+                });
+                
+                
+                mainPanel.addChild(nextButton);
+                
+                if (wearable) {
+                    tryOnAvatarButton = new Text3DOverlay({
+                        text: "Try On Avatar\n     (beta)",
+                        isFacingAvatar: false,
+                        alpha: 1.0,
+                        ignoreRayIntersection: false,
+                        offsetPosition: {
+                            x: 0.35,
+                            y: -0.22,
+                            z: 0
+                        },
+                        dimensions: { x: 0.2, y: 0.09 },
+                        backgroundColor: { red: 0, green: 0, blue: 0 },
+                        color: { red: 255, green: 255, blue: 255 },
+                        topMargin: 0.00625,
+                        leftMargin: 0.00625,
+                        bottomMargin: 0.1,
+                        rightMargin: 0.00625,
+                        lineHeight: 0.03,
+                        alpha: 1,
+                        backgroundAlpha: 0.3
+                    });
+                    
+                    mainPanel.addChild(tryOnAvatarButton);
+                }
+                
+                
+                var textQuantityString = new Text3DOverlay({
+                        text: "Quantity: ",
+                        isFacingAvatar: false,
+                        alpha: 1.0,
+                        ignoreRayIntersection: true,
+                        offsetPosition: {
+                            x: 0.25,
+                            y: -0.3,
+                            z: 0
+                        },
+                        dimensions: { x: 0, y: 0 },
+                        backgroundColor: { red: 255, green: 255, blue: 255 },
+                        color: { red: 0, green: 0, blue: 0 },
+                        topMargin: 0.00625,
+                        leftMargin: 0.00625,
+                        bottomMargin: 0.1,
+                        rightMargin: 0.00625,
+                        lineHeight: 0.02,
+                        alpha: 1,
+                        backgroundAlpha: 0.3
+                    });
+                    
+                mainPanel.addChild(textQuantityString);
+                
+                var textQuantityNumber = new Text3DOverlay({
+                        text: availabilityNumber,
+                        isFacingAvatar: false,
+                        alpha: 1.0,
+                        ignoreRayIntersection: true,
+                        offsetPosition: {
+                            x: 0.28,
+                            y: -0.32,
+                            z: 0
+                        },
+                        dimensions: { x: 0, y: 0 },
+                        backgroundColor: { red: 255, green: 255, blue: 255 },
+                        color: { red: 0, green: 0, blue: 0 },
+                        topMargin: 0.00625,
+                        leftMargin: 0.00625,
+                        bottomMargin: 0.1,
+                        rightMargin: 0.00625,
+                        lineHeight: 0.06,
+                        alpha: 1,
+                        backgroundAlpha: 0.3
+                    });
+                    
+                mainPanel.addChild(textQuantityNumber);
+                
+                if (itemDescriptionString != null) {
+                    var textDescription = new Text3DOverlay({
+                        text: "Price: " + priceNumber + "\nAdditional information: \n" + itemDescriptionString,
+                        isFacingAvatar: false,
+                        alpha: 1.0,
+                        ignoreRayIntersection: true,
+                        offsetPosition: {
+                            x: -0.2,
+                            y: -0.3,
+                            z: 0
+                        },
+                        dimensions: { x: 0, y: 0 },
+                        backgroundColor: { red: 255, green: 255, blue: 255 },
+                        color: { red: 0, green: 0, blue: 0 },
+                        topMargin: 0.00625,
+                        leftMargin: 0.00625,
+                        bottomMargin: 0.1,
+                        rightMargin: 0.00625,
+                        lineHeight: 0.02,
+                        alpha: 1,
+                        backgroundAlpha: 0.3
+                    });
+                    
+                    mainPanel.addChild(textDescription);
+                }
+                
+            
+                
+                print ("GOT HERE: Descrition " + itemDescriptionString + " Availability " + availabilityNumber);
+                
+                isUIWorking = true;
             }
-            
-            
-            var textQuantityString = new Text3DOverlay({
-                    text: "Quantity: ",
-                    isFacingAvatar: false,
-                    alpha: 1.0,
-                    ignoreRayIntersection: true,
-                    offsetPosition: {
-                        x: 0.25,
-                        y: -0.3,
-                        z: 0
-                    },
-                    dimensions: { x: 0, y: 0 },
-                    backgroundColor: { red: 255, green: 255, blue: 255 },
-                    color: { red: 0, green: 0, blue: 0 },
-                    topMargin: 0.00625,
-                    leftMargin: 0.00625,
-                    bottomMargin: 0.1,
-                    rightMargin: 0.00625,
-                    lineHeight: 0.02,
-                    alpha: 1,
-                    backgroundAlpha: 0.3
-                });
-                
-            mainPanel.addChild(textQuantityString);
-            
-            var textQuantityNumber = new Text3DOverlay({
-                    text: availabilityNumber,
-                    isFacingAvatar: false,
-                    alpha: 1.0,
-                    ignoreRayIntersection: true,
-                    offsetPosition: {
-                        x: 0.28,
-                        y: -0.32,
-                        z: 0
-                    },
-                    dimensions: { x: 0, y: 0 },
-                    backgroundColor: { red: 255, green: 255, blue: 255 },
-                    color: { red: 0, green: 0, blue: 0 },
-                    topMargin: 0.00625,
-                    leftMargin: 0.00625,
-                    bottomMargin: 0.1,
-                    rightMargin: 0.00625,
-                    lineHeight: 0.06,
-                    alpha: 1,
-                    backgroundAlpha: 0.3
-                });
-                
-            mainPanel.addChild(textQuantityNumber);
-            
-            if (itemDescriptionString != null) {
-                var textDescription = new Text3DOverlay({
-                    text: "Price: " + priceNumber + "\nAdditional information: \n" + itemDescriptionString,
-                    isFacingAvatar: false,
-                    alpha: 1.0,
-                    ignoreRayIntersection: true,
-                    offsetPosition: {
-                        x: -0.2,
-                        y: -0.3,
-                        z: 0
-                    },
-                    dimensions: { x: 0, y: 0 },
-                    backgroundColor: { red: 255, green: 255, blue: 255 },
-                    color: { red: 0, green: 0, blue: 0 },
-                    topMargin: 0.00625,
-                    leftMargin: 0.00625,
-                    bottomMargin: 0.1,
-                    rightMargin: 0.00625,
-                    lineHeight: 0.02,
-                    alpha: 1,
-                    backgroundAlpha: 0.3
-                });
-                
-                mainPanel.addChild(textDescription);
-            }
-            
-        
-            
-            print ("GOT HERE: Descrition " + itemDescriptionString + " Availability " + availabilityNumber);
-            
-            // FIXME: remove this from here, is just for demo
-            // Here we have to trigger the playback
-            avatarEntity = Entities.addEntity({
-                type: "Model",
-                name: "reviewerAvatar",
-                collisionsWillMove: false,
-                ignoreForCollisions: true,
-                visible: false,
-                modelURL: "https://hifi-content.s3.amazonaws.com/ozan/dev/3d_marketplace/avatars/sintel/sintel_mesh.fbx"
-            });
-            
-            isUIWorking = true;
         },
 
         
