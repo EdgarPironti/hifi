@@ -32,6 +32,8 @@
                     print("Found an item to review: " + itemToReview);
                     
                     // delete the item
+                    Entities.deleteEntity(itemToReview);
+                    print("Item to review deleted");
                     
                 }
             }
