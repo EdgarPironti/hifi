@@ -344,6 +344,14 @@
             // Destroy overlay
             mainPanel.destroy();
             isUIWorking = false;
+            
+            var message = {
+                            command: "Hide",
+                            clip_url: ""
+                        };
+                        
+            Messages.sendMessage(AGENT_REVIEW_CHANNEL, JSON.stringify(message));
+            print("Hide sent to agent");
         }
         
         _this.positionRotationUpdate();
