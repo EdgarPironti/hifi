@@ -9,11 +9,15 @@
     var POINTER_ICON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Pointer.png";
     var STAR_ON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/SingleStar_Yellow.png";
     var STAR_OFF_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/SingleStar_Black.png";
+    var RECORDING_ON_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-active.svg";
+    var RECORDING_OFF_ICON_URL = "http://cdn.highfidelity.com/alan/production/icons/ICO_rec-inactive.svg";
     // var STAR_ON_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/3Star.png";
     // var STAR_OFF_URL = "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png";
     var ANCHOR_ENTITY_FOR_UI_NAME = "anchorEntityForReviewUI";
     var START_RECORDING_TEXT = "Press the bumper to start recording the review";
     var STOP_RECORDING_TEXT = "Press the bumper to stop recording the review";
+    var SHOPPING_CART_NAME = "Shopping cart";
+    var CAMERA_NAME = "Camera for reviews";
     
     
     var RIGHT_HAND = 1;
@@ -29,9 +33,9 @@
 
     
     var _this;
-    var itemToReview = null;
+    //var itemToReview = null;
     var dataBaseID = null;
-    var anchorEntityForUI = null;
+    //var anchorEntityForUI = null;
     var cameraEntity = null;
     var scoreAssigned = null;
     var hoveredButton = null;
@@ -49,8 +53,9 @@
     var workingHand = null;
     
     var mainPanel = null;
+    var cameraPanel = null;
     var buttons = [];
-    var OnAirOverlay = null;
+    var onAirOverlay = null;
     var instructionsOverlay = null;
     
     
@@ -178,9 +183,14 @@
                     hoveredButton = null;
                 } else if (scoreAssigned && !recording) {
                     instructionsOverlay.text = STOP_RECORDING_TEXT;
+                    Recording.startRecording();
+                    onAirOverlay.url = RECORDING_ON_ICON_URL;
                     print("************ start recording");
                     recording = true;
                 } else if (scoreAssigned && recording) {
+                    Recording.stopRecording();
+                    Recording.saveRecordingToAsset(saveDataIntoDB);
+                    onAirOverlay.url = RECORDING_OFF_ICON_URL;
                     recording = false;
                     workDone = true;
                     _this.cleanUI();
@@ -239,56 +249,79 @@
         
     };
     
-    function findItemToReview(entityID) {
-        // Find items in the zone
-        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(entityID).position, (Entities.getEntityProperties(entityID).dimensions.x)/2); 
-        for (var i = 0; i < entitiesInZone.length && itemToReview == null; i++) {
-            // print(Entities.getEntityProperties(entitiesInZone[i]).name);
-            // print(Entities.getEntityProperties(entitiesInZone[i]).userData);
+    function saveDataIntoDB(url) {
+        print("feeding DB with: " + url);
+        // Feed the database
+        
+        var dbObj = getEntityCustomData('infoKey', dataBaseID, null);
+        if(dbObj) {
+            var myName = MyAvatar.displayName ? MyAvatar.displayName : "Anonymous";
+            dbObj.dbKey[dbObj.dbKey.length] = {name: myName, score: scoreAssigned, clip_url: url};
+            setEntityCustomData('infoKey', dataBaseID, dbObj);
+            print("feeded");
+        }
+    };
+    
+    function findItemToReview(searchingPointEntityID) {
+        // Find items in the zone. It return a not null value if it's found an item belonging to the user AND if it's not found a cart belonging to him
+        var foundItemToReviewID = null;
+        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(searchingPointEntityID).position, /*(Entities.getEntityProperties(searchingPointEntityID).dimensions.x)/2*/ 5); 
+        for (var i = 0; i < entitiesInZone.length; i++) {
             
             var ownerObj = getEntityCustomData('ownerKey', Entities.getEntityProperties(entitiesInZone[i]).id, null);
             
             if (ownerObj != null) {
                 print("Not sure if review. Check " + MyAvatar.sessionUUID);
                 if (ownerObj.ownerID === MyAvatar.sessionUUID) {
-                    // store item name
-                    itemToReview = Entities.getEntityProperties(entitiesInZone[i]).name;
-                    print("Found an item to review: " + itemToReview);
-                    
+                    if (Entities.getEntityProperties(entitiesInZone[i]).name == SHOPPING_CART_NAME) {
+                        //the user has a cart, he's not a reviewer
+                        print("the user has a cart, it's not a reviewer");
+                        return null;
+                    } else {
+                        foundItemToReviewID = entitiesInZone[i];
+                    }
                     // delete the item
                     
                 }
             }
         }
+        var res = null;
+        if (foundItemToReviewID) {
+            res = Entities.getEntityProperties(foundItemToReviewID).name;
+            print("Found an item to review: " + res);
+            //delete the item
+        }
+        return res;
     };
     
-    function findAnchorEntityForUI(entityID) {
+    function findAnchorEntityForUI(searchingPointEntityID) {
         // Find items in the zone
         
-        print("Loking for anchor UI");
-        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(entityID).position, 2); 
-        for (var i = 0; i < entitiesInZone.length && anchorEntityForUI == null; i++) {
+        print("Looking for anchor UI");
+        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(searchingPointEntityID).position, 2); 
+        for (var i = 0; i < entitiesInZone.length; i++) {
             
             if (Entities.getEntityProperties(entitiesInZone[i]).name == ANCHOR_ENTITY_FOR_UI_NAME) {
-                anchorEntityForUI = entitiesInZone[i];
-                print("Anchor entity found " + anchorEntityForUI);
+                print("Anchor entity found " + entitiesInZone[i]);
+                return entitiesInZone[i];
             }
         }
+        return null;
     };
     
-    function findItemDataBase(entityID) {
+    function findItemByName(searchingPointEntityID, itemName) {
         // find the database entity
-        var databaseEntityName = itemToReview + "DB";
-        print("Database relative to the item: " + databaseEntityName);
-        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(entityID).position, (Entities.getEntityProperties(entityID).dimensions.x)*10); 
+        print("Looking for item: " + itemName);
+        var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(searchingPointEntityID).position, (Entities.getEntityProperties(searchingPointEntityID).dimensions.x)*10); 
         
-        for (var i = 0; i < entitiesInZone.length && dataBaseID == null; i++) {
-            if (Entities.getEntityProperties(entitiesInZone[i]).name == databaseEntityName) {
-                dataBaseID = entitiesInZone[i];
-                print("Database found! " + entitiesInZone[i]);
+        for (var i = 0; i < entitiesInZone.length; i++) {
+            if (Entities.getEntityProperties(entitiesInZone[i]).name == itemName) {
+                print(itemName + " found! " + entitiesInZone[i]);
+                return entitiesInZone[i];
             }
         }
-        
+        print("Item " + itemName + " not found");
+        return null;
         // Or get the database entity ID if we manage to store it in the userData of the item.
         // var DBObj = getEntityCustomData('DBKey', Entities.getEntityProperties(e).id, null);
         // if (DBObj != null) { dataBaseID = DBObj.DBID }
@@ -315,44 +348,21 @@
             print("entering in the review area");
             insideZone = true;
             
-            findItemToReview(entityID); //assign itemToReview
-            if (itemToReview != null) {
-                findItemDataBase(entityID);
-<<<<<<< HEAD
+            var itemToReview = findItemToReview(entityID); //return the name or null
+            cameraEntity = findItemByName(entityID, CAMERA_NAME);
+            if (itemToReview && cameraEntity) {
+                dataBaseID = findItemByName(entityID, itemToReview + "DB"); //return the ID of the DB or null
                 if (dataBaseID) {
-                    findAnchorEntityForUI(entityID);
+                    var anchorEntityForUI = findAnchorEntityForUI(entityID);
                     if (anchorEntityForUI) {
-                        _this.createReviewUI();
+                        Entities.editEntity(cameraEntity, { visible: true });
+                        _this.createReviewUI(anchorEntityForUI);
                         rightController = new MyController(RIGHT_HAND);     //rightController and leftController are two objects
                         leftController = new MyController(LEFT_HAND);
                         workingHand = rightController;
-                        print("controllers connected");
                         Script.update.connect(update);
-                        print("update connected");
                     }
                 }
-=======
-                
-                
-                
-                // userData: JSON.stringify({
-                // infoKey: {
-                        // dbKey: [
-                            // //{name: default, score: 0, clip_url: atp:example}
-                        // ]
-                    // }
-                // })
-                
-                // Feed the database
-                
-                // var dbObj = getEntityCustomData('infoKey', dataBaseID, null);
-                // var reviewsNumber = 0;
-                // if(dbObj != null) {
-                    // reviewsNumber = dbObj.dbKey.length;
-                    // dbObj.dbKey[reviewsNumber] = {name: MyAvatar.Name, score: score, clip_url: url};
-                    // setEntityCustomData('infoKey', dataBaseID, dbObj.dbKey);
-                // }
->>>>>>> a9911a9819a85a5659acbc64c2de143f59dfb5d7
             }
         },
 
@@ -361,27 +371,43 @@
             if (!workDone) {
                 Script.update.disconnect(update);
             }
-            itemToReview = null;
+            if (recording) {
+                Recording.stopRecording();
+                recording = false;
+            }
+            
+            if (cameraEntity) {
+                Entities.editEntity(cameraEntity, { visible: false });
+                cameraEntity = null;
+            }
+            if (cameraPanel) {
+                cameraPanel.destroy();
+                cameraPanel = null;
+            }
+            workDone = false;
+            //itemToReview = null;
             dataBaseID = null;
-            anchorEntityForUI = null;
+            //anchorEntityForUI = null;
             scoreAssigned = null;
             hoveredButton = null;
             hoveredButtonIndex = -1;
-            recording = false;
-            workDone = false;
             insideZone = false;
             _this.cleanUI();
             print("cleaning after leaving");
         },
         
-        createReviewUI : function() {
-            
+        createReviewUI : function(anchorEntityID) {
+            Entities.editEntity(anchorEntityID, { locked: false });
+            var anchorEntityPosition = Entities.getEntityProperties(anchorEntityID).position;
+            anchorEntityPosition.y = MyAvatar.getHeadPosition().y;
+            Entities.editEntity(anchorEntityID, { position: anchorEntityPosition });
+            Entities.editEntity(anchorEntityID, { locked: true });
             
             print ("Creating UI");
             //set the main panel to follow the inspect entity
             mainPanel = new OverlayPanel({
-                anchorPositionBinding: { entity: anchorEntityForUI },
-                anchorRotationBinding: { entity: anchorEntityForUI },
+                anchorPositionBinding: { entity: anchorEntityID },
+                anchorRotationBinding: { entity: anchorEntityID },
                 //anchorPositionBinding: { avatar: "MyAvatar"},
                 //anchorRotationBinding: { avatar: "MyAvatar" },
                 
@@ -439,200 +465,39 @@
                 });
                 
             mainPanel.addChild(instructionsOverlay);
-            // var aggregateScore = new Image3DOverlay({
-                // url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/2Star.png",
-                // dimensions: {
-                    // x: 0.25,
-                    // y: 0.25
-                // },
-                // isFacingAvatar: false,
-                // alpha: 1,
-                // ignoreRayIntersection: true,
-                // offsetPosition: {
-                    // x: 0,
-                    // y: 0.27,
-                    // z: 0
-                // },
-                // emissive: true,
-            // });
             
-            // mainPanel.addChild(aggregateScore);
-            
-            // playButton = new Image3DOverlay({
-                // url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Play.png",
-                // dimensions: {
-                    // x: 0.08,
-                    // y: 0.08
-                // },
-                // isFacingAvatar: false,
-                // alpha: 1,
-                // ignoreRayIntersection: false,
-                // offsetPosition: {
-                    // x: 0.42,
-                    // y: 0.27,
-                    // z: 0
-                // },
-                // emissive: true,
-            // });
-            
-            // mainPanel.addChild(playButton);
-            
-            
-            // reviewerScore = new Image3DOverlay({
-                // url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/1Star.png",
-                // dimensions: {
-                    // x: 0.15,
-                    // y: 0.15
-                // },
-                // isFacingAvatar: false,
-                // alpha: 1,
-                // ignoreRayIntersection: true,
-                // offsetPosition: {
-                    // x: 0.31,
-                    // y: 0.26,
-                    // z: 0
-                // },
-                // emissive: true,
-            // });
-            
-            // mainPanel.addChild(reviewerScore);
-            
-            // nextButton = new Image3DOverlay({
-                // url: "https://dl.dropboxusercontent.com/u/14127429/FBX/VRshop/Next.png",
-                // dimensions: {
-                    // x: 0.2,
-                    // y: 0.2
-                // },
-                // isFacingAvatar: false,
-                // alpha: 1,
-                // ignoreRayIntersection: false,
-                // offsetPosition: {
-                    // x: 0.36,
-                    // y: 0.18,
-                    // z: 0
-                // },
-                // emissive: true,
-            // });
-            
-            
-            // mainPanel.addChild(nextButton);
-            
-            // if (wearable) {
-                // tryOnAvatarButton = new Text3DOverlay({
-                    // text: "Try On Avatar\n     (beta)",
-                    // isFacingAvatar: false,
-                    // alpha: 1.0,
-                    // ignoreRayIntersection: false,
-                    // offsetPosition: {
-                        // x: 0.35,
-                        // y: -0.22,
-                        // z: 0
-                    // },
-                    // dimensions: { x: 0.2, y: 0.09 },
-                    // backgroundColor: { red: 0, green: 0, blue: 0 },
-                    // color: { red: 255, green: 255, blue: 255 },
-                    // topMargin: 0.00625,
-                    // leftMargin: 0.00625,
-                    // bottomMargin: 0.1,
-                    // rightMargin: 0.00625,
-                    // lineHeight: 0.03,
-                    // alpha: 1,
-                    // backgroundAlpha: 0.3
-                // });
+            cameraPanel = new OverlayPanel({
+                anchorPositionBinding: { entity: cameraEntity },
+                anchorRotationBinding: { entity: cameraEntity },
+                //anchorPositionBinding: { avatar: "MyAvatar"},
+                //anchorRotationBinding: { avatar: "MyAvatar" },
                 
-                // mainPanel.addChild(tryOnAvatarButton);
-            // }
-            
-            
-            // var textQuantityString = new Text3DOverlay({
-                    // text: "Quantity: ",
-                    // isFacingAvatar: false,
-                    // alpha: 1.0,
-                    // ignoreRayIntersection: true,
-                    // offsetPosition: {
-                        // x: 0.25,
-                        // y: -0.3,
-                        // z: 0
-                    // },
-                    // dimensions: { x: 0, y: 0 },
-                    // backgroundColor: { red: 255, green: 255, blue: 255 },
-                    // color: { red: 0, green: 0, blue: 0 },
-                    // topMargin: 0.00625,
-                    // leftMargin: 0.00625,
-                    // bottomMargin: 0.1,
-                    // rightMargin: 0.00625,
-                    // lineHeight: 0.02,
-                    // alpha: 1,
-                    // backgroundAlpha: 0.3
-                // });
+                //anchorPosition: Entities.getEntityProperties(_this.entityID).position,
+                //offsetPosition: Vec3.subtract(Entities.getEntityProperties(_this.entityID).position, MyAvatar.position),
                 
-            // mainPanel.addChild(textQuantityString);
+                isFacingAvatar: false
+            });
             
-            // var textQuantityNumber = new Text3DOverlay({
-                    // text: availabilityNumber,
-                    // isFacingAvatar: false,
-                    // alpha: 1.0,
-                    // ignoreRayIntersection: true,
-                    // offsetPosition: {
-                        // x: 0.28,
-                        // y: -0.32,
-                        // z: 0
-                    // },
-                    // dimensions: { x: 0, y: 0 },
-                    // backgroundColor: { red: 255, green: 255, blue: 255 },
-                    // color: { red: 0, green: 0, blue: 0 },
-                    // topMargin: 0.00625,
-                    // leftMargin: 0.00625,
-                    // bottomMargin: 0.1,
-                    // rightMargin: 0.00625,
-                    // lineHeight: 0.06,
-                    // alpha: 1,
-                    // backgroundAlpha: 0.3
-                // });
+            onAirOverlay = new Image3DOverlay({
+                    url: RECORDING_OFF_ICON_URL,
+                    dimensions: {
+                        x: 0.1,
+                        y: 0.1
+                    },
+                    isFacingAvatar: true,
+                    alpha: 0.8,
+                    ignoreRayIntersection: false,
+                    offsetPosition: {
+                        x: 0.2,
+                        y: 0.1,
+                        z: 0
+                    },
+                    emissive: true,
+                    visible: true,
+                });
+            print("OnAir added");
+            cameraPanel.addChild(onAirOverlay);
                 
-            // mainPanel.addChild(textQuantityNumber);
-            
-            // if (itemDescriptionString != null) {
-                // var textDescription = new Text3DOverlay({
-                    // text: "Price: " + priceNumber + "\nAdditional information: \n" + itemDescriptionString,
-                    // isFacingAvatar: false,
-                    // alpha: 1.0,
-                    // ignoreRayIntersection: true,
-                    // offsetPosition: {
-                        // x: -0.2,
-                        // y: -0.3,
-                        // z: 0
-                    // },
-                    // dimensions: { x: 0, y: 0 },
-                    // backgroundColor: { red: 255, green: 255, blue: 255 },
-                    // color: { red: 0, green: 0, blue: 0 },
-                    // topMargin: 0.00625,
-                    // leftMargin: 0.00625,
-                    // bottomMargin: 0.1,
-                    // rightMargin: 0.00625,
-                    // lineHeight: 0.02,
-                    // alpha: 1,
-                    // backgroundAlpha: 0.3
-                // });
-                
-                // mainPanel.addChild(textDescription);
-            // }
-            
-        
-            
-            // print ("GOT HERE: Descrition " + itemDescriptionString + " Availability " + availabilityNumber);
-            
-            // // FIXME: remove this from here, is just for demo
-            // // Here we have to trigger the playback
-            // avatarEntity = Entities.addEntity({
-                // type: "Model",
-                // name: "reviewerAvatar",
-                // collisionsWillMove: false,
-                // ignoreForCollisions: true,
-                // visible: false,
-                // modelURL: "https://hifi-content.s3.amazonaws.com/ozan/dev/3d_marketplace/avatars/sintel/sintel_mesh.fbx"
-            // });
-            
             isUIWorking = true;
         },
         
@@ -641,13 +506,18 @@
             workingHand.clean();
             if (mainPanel) {
                 mainPanel.destroy();
+                //cameraPanel.destroy();
             }
             mainPanel = null;
+            //cameraPanel = null;
             isUIWorking = false;
         },
 
         unload: function (entityID) {
             this.cleanUI();
+            if (cameraPanel) {
+                cameraPanel.destroy();
+            }
         }
     }
 
