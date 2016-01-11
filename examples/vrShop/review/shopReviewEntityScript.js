@@ -33,9 +33,7 @@
 
     
     var _this;
-    //var itemToReview = null;
     var dataBaseID = null;
-    //var anchorEntityForUI = null;
     var cameraEntity = null;
     var scoreAssigned = null;
     var hoveredButton = null;
@@ -196,20 +194,6 @@
                     _this.cleanUI();
                     print("********** stop recording");
                 }
-                    
-                    // if (playButton == triggeredButton) {
-                        // if(avatarEntity != null) {
-                            // print("Play pressed!");
-                            // print(avatarEntity);
-                            
-                            // var oldDimension = Entities.getEntityProperties(avatarEntity).dimensions;
-                            // var newDimension = Vec3.multiply(oldDimension, 0.15);
-                        
-                            // Entities.editEntity(avatarEntity, { dimensions: newDimension });
-                            // Entities.editEntity(avatarEntity, { visible: true });
-                        // }
-                    // }
-
             } else if (!bumperPressed && this.waitingForBumpReleased) {
                 this.waitingForBumpReleased = false;
             }
@@ -241,10 +225,6 @@
         if (!insideZone && isUIWorking) {
             // Destroy rays
             _this.cleanUI();
-            
-            // // Destroy overlay
-            // mainPanel.destroy();
-            // isUIWorking = false;
         }
         
     };
@@ -268,9 +248,9 @@
         var entitiesInZone = Entities.findEntities(Entities.getEntityProperties(searchingPointEntityID).position, /*(Entities.getEntityProperties(searchingPointEntityID).dimensions.x)/2*/ 5); 
         for (var i = 0; i < entitiesInZone.length; i++) {
             
-            var ownerObj = getEntityCustomData('ownerKey', Entities.getEntityProperties(entitiesInZone[i]).id, null);
+            var ownerObj = getEntityCustomData('ownerKey', entitiesInZone[i], null);
             
-            if (ownerObj != null) {
+            if (ownerObj) {
                 print("Not sure if review. Check " + MyAvatar.sessionUUID);
                 if (ownerObj.ownerID === MyAvatar.sessionUUID) {
                     if (Entities.getEntityProperties(entitiesInZone[i]).name == SHOPPING_CART_NAME) {
@@ -280,10 +260,6 @@
                     } else {
                         foundItemToReviewID = entitiesInZone[i];
                     }
-                    // delete the item
-                    Entities.deleteEntity(itemToReview);
-                    print("Item to review deleted");
-                    
                 }
             }
         }
@@ -292,6 +268,7 @@
             res = Entities.getEntityProperties(foundItemToReviewID).name;
             print("Found an item to review: " + res);
             //delete the item
+            Entities.deleteEntity(foundItemToReviewID);
         }
         return res;
     };
@@ -389,7 +366,6 @@
             workDone = false;
             //itemToReview = null;
             dataBaseID = null;
-            //anchorEntityForUI = null;
             scoreAssigned = null;
             hoveredButton = null;
             hoveredButtonIndex = -1;

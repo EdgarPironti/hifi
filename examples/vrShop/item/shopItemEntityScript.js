@@ -230,7 +230,7 @@
                 originalDimensions = entityProperties.dimensions;
 
             }
-            if (cartID != null) {
+            if (cartID) {
                 //the user is a buyer
                 // Everytime we grab, we create the inspectEntity and the inspectAreaOverlay in front of the avatar
                 if(!inspecting) {
@@ -256,6 +256,7 @@
                     });
                 }
                 
+                Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
                 _this.createInspectOverlay(inspectingEntity);
                 _this.createCartOverlay(_this.entityID);
                 print("Got after the creation!");
@@ -283,11 +284,6 @@
                     Entities.callEntityMethod(zoneID, 'refreshCartContent', dataArray);
                 }
             }
-            
-            
-            Entities.editEntity(_this.entityID, { ignoreForCollisions: false });
-            
-            
         },
         
         continueNearGrab: function () {
@@ -298,7 +294,7 @@
             print("I was released... entity:" + _this.entityID);
             
             if (cartID == null) {
-                //Entities.deleteEntity(this.entityID);
+                Entities.deleteEntity(this.entityID);
                 return;
             }
             
