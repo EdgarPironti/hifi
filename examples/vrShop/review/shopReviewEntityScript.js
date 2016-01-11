@@ -281,6 +281,8 @@
                         foundItemToReviewID = entitiesInZone[i];
                     }
                     // delete the item
+                    Entities.deleteEntity(itemToReview);
+                    print("Item to review deleted");
                     
                 }
             }

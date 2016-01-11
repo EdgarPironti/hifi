@@ -14,6 +14,7 @@ var WAIT_FOR_AUDIO_MIXER = 1;
 
 var PLAY = "Play";
 var SHOW = "Show";
+var HIDE = "Hide";
 
 function getAction(channel, message, senderID) {
     if(subscribed) {
@@ -44,6 +45,11 @@ function getAction(channel, message, senderID) {
                 Recording.setPlayerTime(0.0);
                 Recording.startPlaying();
                 Recording.stopPlaying();
+                break;
+              
+            case HIDE:
+                print("Hide");
+                Agent.isAvatar = false;
                 break;
                 
             default:
